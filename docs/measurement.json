@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-23",
+  "scope": "Two goals in Settings on one local iOS Simulator (iPhone 17 Pro, iOS 26). Not a general phone-agent evaluation.",
+  "timing": "From the first observation through the final DONE, including Jev requests, device verbs, re-observations and per-step screenshots. Excludes simulator boot and the example's own setup/verification walks.",
+  "jev": "typesafe-ai/jev via the Vercel AI Gateway (free tier)",
+  "text_model": "not exercised — neither goal types",
+  "platform": "macOS / iOS Simulator / @phone-use/sdk 0.5.1 (agent-device 0.19.3)",
+  "runs": [
+    {
+      "goal": "In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.",
+      "start": "Settings root screen (relaunched); the switch forced OFF first",
+      "verified_by": "examples/bold-text.ts walks to the switch with plain verbs after the run and reads its value",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 11191,
+      "decisions": 4,
+      "request_latencies_ms": [515, 372, 385, 313],
+      "steps": [
+        "TAP \"Accessibility\" → screen changed",
+        "TAP \"Display & Text Size\" → screen changed",
+        "TOGGLE \"Bold Text\" → 0 → 1",
+        "DONE (independent check 0.87)"
+      ],
+      "log": "docs/runs/bold-text-local-2.log"
+    },
+    {
+      "goal": "Open Settings and go to General, then About",
+      "start": "Settings on Display & Text Size, left there by the previous run",
+      "verified_by": "the final screenshot (docs/runs/about-local/004.png) shows the About screen",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 14900,
+      "decisions": 5,
+      "request_latencies_ms": [393, 264, 263, 263, 1210],
+      "steps": [
+        "BACK → screen changed",
+        "BACK → screen changed",
+        "TAP \"General\" → screen changed",
+        "TAP \"About\" → screen changed",
+        "DONE (independent check 0.92)"
+      ],
+      "log": "docs/runs/about-local.log",
+      "media": "demo.gif is this run's per-step screenshots at the recorded step timings"
+    }
+  ],
+  "retained_failures": [
+    {
+      "goal": "Bold Text, first attempt",
+      "note": "Reported done in 2 decisions and verified, but the run had started ON the target screen: the example's goHome() had not taken effect before the first observation. The example now relaunches Settings to its root and waits; the number was discarded.",
+      "log": "docs/runs/bold-text-local-1.log"
+    },
+    {
+      "goal": "Bold Text on a phone-use cloud phone",
+      "note": "The first RPC timed out (daemon under load from a concurrent benchmark). Cloud calls now go through resilient(): re-open on SESSION_NOT_FOUND, one retry for read-only calls, never for mutations.",
+      "log": "docs/runs/bold-text-cloud-1.log"
+    }
+  ]
+}

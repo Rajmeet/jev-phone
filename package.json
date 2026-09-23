@@ -1,0 +1,37 @@
+{
+  "name": "jev-phone",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@phone-use/sdk": "0.5.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  },
+  "description": "A phone agent that chooses instead of generating: TypeSafe's Jev picks each action from what the screen offers; phone-use executes it.",
+  "license": "MIT",
+  "scripts": {
+    "check": "biome check . && tsc --noEmit && bun test",
+    "test": "bun test",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "run": "bun examples/run.ts",
+    "demo": "bun examples/bold-text.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rajmeet/jev-phone.git"
+  },
+  "keywords": [
+    "jev",
+    "typesafe",
+    "system-one",
+    "phone-use",
+    "ios",
+    "agent",
+    "computer-use"
+  ]
+}
