@@ -115,7 +115,7 @@ Every executed target is an observed element. Model output never becomes a selec
 | [text.ts](src/text.ts) | The text helper and its contract |
 | [device.ts](src/device.ts) | Local simulator or cloud phone; cloud session recovery |
 
-About 900 lines of TypeScript, one runtime dependency (`@phone-use/sdk`).
+About 1,000 lines of TypeScript including comments, one runtime dependency (`@phone-use/sdk`).
 
 ## Evidence and limits
 
