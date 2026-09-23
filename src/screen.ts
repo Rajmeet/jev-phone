@@ -90,7 +90,9 @@ export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<st
     // On a launcher, drop app icons from TAP so OPEN_APP is the one way to
     // launch: offering both split the probability between two right answers.
     controls: visible
-      .filter((e) => e.role !== 'Switch' && !(launcher && appNames.has(e.label.toLowerCase())) && !avoid.has(elementKey(e)))
+      .filter(
+        (e) => e.role !== 'Switch' && !(launcher && appNames.has(e.label.toLowerCase())) && !avoid.has(elementKey(e)),
+      )
       .slice(0, MAX_CONTROLS),
     switches: visible.filter((e) => e.role === 'Switch').slice(0, MAX_CONTROLS),
     fields: core
