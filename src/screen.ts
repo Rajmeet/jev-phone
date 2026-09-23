@@ -32,12 +32,22 @@ const MAX_CONTROLS = 60;
 const MAX_TEXT_CHARS = 3000;
 const LAUNCHER = /springboard|launcher|home ?screen/i;
 
-/** Enabled, unobstructed, and inside the viewport. */
-export function onScreen(e: UiElement, vh: number): boolean {
+/**
+ * Enabled, unobstructed, and centred inside the viewport on BOTH axes: the
+ * device refuses a press whose centre is off-screen, and a spreadsheet's
+ * columns past the right edge were offered — and refused — in a benchmark run.
+ */
+export function onScreen(e: UiElement, vh: number, vw = Number.POSITIVE_INFINITY): boolean {
   if (!e.rect) return false;
   const cy = e.rect.y + e.rect.height / 2;
   const cx = e.rect.x + e.rect.width / 2;
-  return cy > 0 && cy < vh && cx > 0 && e.enabled !== false && !e.blocked;
+  return cy > 0 && cy < vh && cx > 0 && cx < vw && e.enabled !== false && !e.blocked;
+}
+
+/** The viewport width from the Application root (the SDK exposes only the height). */
+function viewportWidth(core: Phone): number {
+  const root = core.nodes().find((n) => (n.role ?? n.type) === 'Application' && n.rect);
+  return root?.rect?.width ?? Number.POSITIVE_INFINITY;
 }
 
 /**
@@ -69,7 +79,8 @@ export const elementKey = (e: UiElement) => `${e.role}|${e.label}`;
 export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<string> = new Set()): Promise<Screen> {
   await core.observe();
   const vh = core.viewportHeight();
-  const visible = core.interactiveElements().filter((e) => onScreen(e, vh));
+  const vw = viewportWidth(core);
+  const visible = core.interactiveElements().filter((e) => onScreen(e, vh, vw));
   const app = core.currentApp();
   const launcher = LAUNCHER.test(app ?? '');
   const others = apps.filter((a) => a.bundleId !== app && a.name !== app).map((a) => a.name);
@@ -97,7 +108,7 @@ export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<st
     switches: visible.filter((e) => e.role === 'Switch').slice(0, MAX_CONTROLS),
     fields: core
       .inputFields(true)
-      .filter((e) => onScreen(e, vh))
+      .filter((e) => onScreen(e, vh, vw))
       .slice(0, MAX_CONTROLS),
     apps: others,
     launcher,
@@ -112,7 +123,8 @@ export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<st
 export async function refind(core: Phone, target: UiElement, field: boolean): Promise<UiElement | null> {
   await core.observe();
   const vh = core.viewportHeight();
-  const pool = (field ? core.inputFields(true) : core.interactiveElements()).filter((e) => onScreen(e, vh));
+  const vw = viewportWidth(core);
+  const pool = (field ? core.inputFields(true) : core.interactiveElements()).filter((e) => onScreen(e, vh, vw));
   const centre = (e: UiElement) => (e.rect ? [e.rect.x + e.rect.width / 2, e.rect.y + e.rect.height / 2] : [0, 0]);
   const [ox, oy] = centre(target) as [number, number];
   const dist = (e: UiElement) => {
