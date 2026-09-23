@@ -4,7 +4,7 @@
 
 Give it one goal. [TypeSafe's Jev](https://docs.typesafe.ai/concepts/system-one) picks an operation and a target from what the screen actually offers — in one request, in a few hundred milliseconds, with probabilities instead of prose. [phone-use](https://github.com/Rajmeet/phone-use) executes it on a real iOS Simulator or a cloud iPhone. A small LLM writes text only when the operation is `TYPE`.
 
-**Settings → Accessibility → Display & Text Size → Bold Text on, in 11.2 seconds and 4 decisions**, verified by reading the switch back afterwards.
+**Bold Text on in 11.2 s and 4 decisions. A new contact typed and saved in 19.4 s and 6 decisions.** Both verified by reading the phone afterwards, not by trusting the model.
 
 <img src="demo.gif" alt="Jev navigating Settings to the About screen, at recorded speed" width="270" />
 
@@ -24,7 +24,7 @@ switches      [1] Switch    Bold Text        value 0
 text_fields   [1] SearchField  Search
 ```
 
-The operations are `TAP`, `TOGGLE`, `TYPE`, `SCROLL_UP`, `SCROLL_DOWN`, `BACK`, `HOME`, `OPEN_APP`, `WAIT`, `DONE` and `BLOCKED`. Only operations the screen supports are offered: no `TOGGLE` without a switch, no `TYPE` without a field, no `OPEN_APP` on the app itself.
+The operations are `TAP`, `TOGGLE`, `TYPE`, `SCROLL_UP`, `SCROLL_DOWN`, `BACK`, `OPEN_APP`, `WAIT`, `DONE` and `BLOCKED`. Only operations the screen supports are offered: no `TOGGLE` without a switch, no `TYPE` without a field, no `OPEN_APP` on the app itself.
 
 ```text
                         one Jev request
@@ -72,7 +72,18 @@ phone: iPhone 17 Pro
  5.  14.9s  DONE  conf 0.99  done 0.92  1210ms  [done: independent check 0.92]
 ```
 
-`bun examples/bold-text.ts` runs the verified example: it forces Bold Text off, runs the goal, then walks to the switch with plain verbs and reads it. A `DONE` from the model is not proof; the read-back is.
+`bun examples/bold-text.ts` and `bun examples/new-contact.ts` are the verified examples. The first forces Bold Text off, runs the goal, then walks to the switch with plain verbs and reads it. The second confirms a unique name is absent, runs the goal, relaunches Contacts and finds the contact through search. A `DONE` from the model is not proof; the read-back is.
+
+The contact run is also where the done veto earns its keep: with both names typed and the form unsaved, Jev proposes `DONE`; the independent check, reading the same screen, puts P(done) below 0.1; `DONE` is removed from the next request's options and Jev taps `Done`.
+
+```text
+ 1. TAP "Add"                          conf 0.99  → screen changed
+ 2. TYPE "First name" ← "Ada"          conf 0.88  +text 339ms
+ 3. TYPE "Last name" ← "LovelaceCQDL"  conf 0.85  +text 406ms
+ 4. DONE                               done 0.07  → vetoed
+ 5. TAP "Done"                         conf 0.96  → screen changed
+ 6. DONE                               done 0.68  [done]
+```
 
 Jev is reachable two ways: TypeSafe's API (`TYPESAFE_API_KEY`) or the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`AI_GATEWAY_API_KEY`, model `typesafe-ai/jev`). The text helper for `TYPE` speaks the OpenAI chat-completions dialect and defaults to the gateway with Llama 4 Scout, reusing the same key; point `TEXT_MODEL_BASE_URL` / `TEXT_MODEL` at anything compatible.
 
@@ -113,17 +124,18 @@ Every executed target is an observed element. Model output never becomes a selec
 | [screen.ts](src/screen.ts) | Observation → indexed action space; re-finding an element |
 | [jev.ts](src/jev.ts) | Plain-fetch Jev client, two transports, strict validation |
 | [text.ts](src/text.ts) | The text helper and its contract |
+| [apps.ts](src/apps.ts) | What OPEN_APP may target: installed apps plus the built-in Apple ones |
 | [device.ts](src/device.ts) | Local simulator or cloud phone; cloud session recovery |
 
-About 1,000 lines of TypeScript including comments, one runtime dependency (`@phone-use/sdk`).
+About 1,100 lines of TypeScript including comments, one runtime dependency (`@phone-use/sdk`).
 
 ## Evidence and limits
 
-Two goals on one local simulator, both verified independently: **Bold Text on in 11.2 s / 4 decisions** from the Settings root, and **General → About in 14.9 s / 5 decisions** from two screens deep in another section. Jev latency was 263–536 ms per decision, except the final done-check on the About screen (1.2 s). Full records, and the two discarded attempts, are in [performance.md](docs/performance.md) and [measurement.json](docs/measurement.json).
+Three goals on one local simulator, all verified independently: **Bold Text on in 11.2 s / 4 decisions** from the Settings root, **General → About in 14.9 s / 5 decisions** from two screens deep in another section, and **a contact created in 19.4 s / 6 decisions** with two typed values (text helper 339 and 406 ms). Jev latency was 260–550 ms per decision, with two outliers at 1.1–1.4 s on the busiest screens. Full records, and the five discarded attempts with what each one changed, are in [performance.md](docs/performance.md) and [measurement.json](docs/measurement.json).
 
-That is two goals in one app. It is not a general phone-agent evaluation. On the [iOSWorld](https://github.com/ljang0/iOSWorld) benchmark this policy earns partial credit for the steps it performs, but most iOSWorld tasks also ask the agent to *report* something — and a System One model has no reply channel. Pair it with an LLM for those; the loop stops with a reason when it cannot proceed.
+That is three goals in two first-party apps. It is not a general phone-agent evaluation. On the [iOSWorld](https://github.com/ljang0/iOSWorld) benchmark this policy earns partial credit for the steps it performs, but most iOSWorld tasks also ask the agent to *report* something — and a System One model has no reply channel. Pair it with an LLM for those; the loop stops with a reason when it cannot proceed.
 
-Known limits: unlabeled icons, custom controls, canvas and in-app web content leave nothing to offer; permission prompts and system alerts are outside the policy; a valid action can still be the wrong one. `DONE` is accepted only with the independent check, and the examples still read the device afterwards.
+Known limits: unlabeled icons, custom controls, canvas and in-app web content leave nothing to offer; permission prompts and system alerts are outside the policy; there is no `HOME` (the local simulator backend's home press is a no-op, so `OPEN_APP` switches apps instead); a valid action can still be the wrong one. `DONE` is accepted only with the independent check, and the examples still read the device afterwards.
 
 ## Development
 

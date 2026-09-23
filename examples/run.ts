@@ -7,6 +7,7 @@
 // --screenshots <dir>                   save a screenshot per step (for demos)
 // --allow-destructive                   permit taps on Delete/Pay/Send-style controls
 // --json                                print the final result as JSON
+// --debug                               print every answer's probabilities
 import { mkdirSync } from 'node:fs';
 import { connectDevice, run } from '../src/index.ts';
 
@@ -28,6 +29,7 @@ const device = flag('--device');
 const screenshotDir = flag('--screenshots');
 const allowDestructive = has('--allow-destructive');
 const json = has('--json');
+const debug = has('--debug');
 const goal = args.join(' ').trim();
 if (!goal) {
   console.error('usage: bun examples/run.ts [--device connect|launch|cloud|<udid>] [--screenshots <dir>] "<goal>"');
@@ -52,10 +54,23 @@ try {
     }
     const e = n.value;
     const d = e.decision;
+    if (debug) {
+      for (const [id, a] of Object.entries(e.answers)) {
+        const body =
+          a.type === 'noul'
+            ? a.noul.toFixed(2)
+            : Object.entries(a.probabilities)
+                .sort((x, y) => y[1] - x[1])
+                .slice(0, 6)
+                .map(([k, p]) => `${k} ${p.toFixed(2)}`)
+                .join('  ');
+        console.error(`      ${id.padEnd(14)} ${body}`);
+      }
+    }
     const target = d.element?.label ?? d.app;
     console.error(
       `${String(e.step).padStart(2)}. ${(e.elapsedMs / 1000).toFixed(1).padStart(5)}s  ${d.op}${target ? ` "${target}"` : ''}` +
-        `${e.action?.text ? ` ← ${JSON.stringify(e.action.text)}` : ''}  conf ${d.confidence.toFixed(2)}  done ${d.goalDone.toFixed(2)}  ${e.jevMs}ms` +
+        `${e.action?.text ? ` ← ${JSON.stringify(e.action.text)}` : ''}  conf ${d.confidence.toFixed(2)}  done ${d.goalDone.toFixed(2)}  ${e.jevMs}ms${e.textMs !== undefined ? ` +text ${e.textMs}ms` : ''}` +
         `${e.action ? `  → ${e.action.outcome}` : ''}${e.status ? `  [${e.status}: ${e.reason}]` : ''}`,
     );
   }

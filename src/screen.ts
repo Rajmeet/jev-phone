@@ -2,6 +2,7 @@
 // code owns the mapping back to real elements, so the model can never name a
 // selector, a coordinate, or an element that was not offered.
 import { DeviceCore, type SnapshotNode, type UiElement } from '@phone-use/sdk';
+import type { App } from './apps.ts';
 
 /** DeviceCore plus the raw node cache (labels of static text, not just controls). */
 export class Phone extends DeviceCore {
@@ -21,7 +22,7 @@ export type Screen = {
   switches: UiElement[];
   /** Editable text fields. */
   fields: UiElement[];
-  /** Installed apps OPEN_APP may target (current app excluded). */
+  /** Names of apps OPEN_APP may target (current app excluded). */
   apps: string[];
   /** Home screen / launcher — app icons and OPEN_APP are the same action there. */
   launcher: boolean;
@@ -62,13 +63,13 @@ function screenName(core: Phone): string {
 }
 
 /** Observe the device and build the action space for this step. */
-export async function readScreen(core: Phone, apps: string[]): Promise<Screen> {
+export async function readScreen(core: Phone, apps: App[]): Promise<Screen> {
   await core.observe();
   const vh = core.viewportHeight();
   const visible = core.interactiveElements().filter((e) => onScreen(e, vh));
   const app = core.currentApp();
   const launcher = LAUNCHER.test(app ?? '');
-  const others = apps.filter((a) => a !== app);
+  const others = apps.filter((a) => a.bundleId !== app && a.name !== app).map((a) => a.name);
   const appNames = new Set(others.map((a) => a.toLowerCase()));
   const visibleText: string[] = [];
   let chars = 0;

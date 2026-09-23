@@ -13,7 +13,7 @@ TOGGLE, text fields only under TYPE, apps only under OPEN_APP.
 ```
                         one Jev request
                        ┌───────────────────────────┐
-screen → element table → operation                 │   TAP · TOGGLE · TYPE · SCROLL · BACK · HOME · OPEN_APP · WAIT · DONE · BLOCKED
+screen → element table → operation                 │   TAP · TOGGLE · TYPE · SCROLL · BACK · OPEN_APP · WAIT · DONE · BLOCKED
                        │ tap_target                │   only what THIS screen supports is offered
                        │ toggle_target             │
                        │ type_target               │
@@ -78,6 +78,10 @@ Pay, Send, Transfer, Sign out, …) are refused unless `allowDestructive` is set
 The pattern is deliberately small; it is a floor, not a policy.
 
 Device mutations are never retried. A timed-out press may already have landed.
+
+There is no HOME operation. OPEN_APP switches apps directly, and the local
+simulator backend's home press was observed to be a no-op (Settings still
+frontmost 3 s later), which would have made HOME a silent wasted step.
 
 ## Confidence
 

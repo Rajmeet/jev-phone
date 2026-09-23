@@ -4,7 +4,8 @@
 // observation immediately before acting; model output never becomes a
 // selector, a coordinate, or code.
 import type { UiElement } from '@phone-use/sdk';
-import { createJevClient, type JevClient } from './jev.ts';
+import { type App, discoverApps } from './apps.ts';
+import { createJevClient, type JevAnswer, type JevClient } from './jev.ts';
 import { buildRequest, type Decision, type Op, resolve, type Step } from './policy.ts';
 import { type Phone, readScreen, refind, type Screen } from './screen.ts';
 import { type TextHelper, textHelper } from './text.ts';
@@ -22,8 +23,8 @@ export type AgentOptions = {
   /** Labels that must not be tapped without opting in (default: destructive/financial verbs). */
   destructive?: RegExp | undefined;
   allowDestructive?: boolean | undefined;
-  /** Installed app names OPEN_APP may target. Default: the device's app list. */
-  apps?: string[] | undefined;
+  /** Apps OPEN_APP may target. Default: installed third-party apps plus the built-in Apple apps. */
+  apps?: App[] | undefined;
   /** Save a screenshot per step into this directory (for demos; the model never sees them). */
   screenshotDir?: string | undefined;
   signal?: AbortSignal | undefined;
@@ -35,7 +36,11 @@ export type AgentEvent = {
   screen: { app: string | undefined; title: string; controls: number; switches: number; fields: number };
   offered: Op[];
   decision: Decision;
+  /** Every answer in the request, with probabilities — for inspection and traces. */
+  answers: Record<string, JevAnswer>;
   jevMs: number;
+  /** Text-helper latency, when this step typed. */
+  textMs?: number | undefined;
   /** Set when the step executed something. */
   action?: Step | undefined;
   /** Terminal status, set on the last event only. */
@@ -63,11 +68,15 @@ const firstLine = (s: string) => (s.split('\n')[0] ?? '').slice(0, 160);
 /** Launches are asynchronous: wait until the new app is frontmost AND populated. */
 async function settleAfterLaunch(core: Phone, before: string | undefined): Promise<void> {
   const deadline = Date.now() + LAUNCH_SETTLE_MS;
+  let last = -1;
   while (Date.now() < deadline) {
     await core.observe().catch(() => undefined);
     const vh = core.viewportHeight();
     const controls = core.interactiveElements().filter((e) => e.rect && e.rect.y < vh).length;
-    if (core.currentApp() !== before && controls >= LAUNCH_MIN_CONTROLS) return;
+    // Populated, or at least stable: a near-empty Contacts list never reaches
+    // the control floor and waited out the whole ceiling (17 s, live).
+    if (core.currentApp() !== before && controls > 0 && (controls >= LAUNCH_MIN_CONTROLS || controls === last)) return;
+    last = controls;
     await sleep(500);
   }
 }
@@ -92,6 +101,9 @@ export async function* run(
   let jevMs = 0;
   let decisions = 0;
   let apps = opts.apps;
+  const failedApps = new Set<string>();
+  let lastKey: string | undefined;
+  let repeatRun = 0;
 
   const finish = (status: AgentResult['status'], reason: string): AgentResult => ({
     status,
@@ -104,10 +116,13 @@ export async function* run(
 
   while (decisions < maxSteps) {
     if (opts.signal?.aborted) return finish('stopped', 'aborted');
-    if (!apps) apps = await core.listApps().catch(() => []);
+    if (!apps) apps = await discoverApps(core);
     let s: Screen;
     try {
-      s = await readScreen(core, apps);
+      s = await readScreen(
+        core,
+        apps.filter((a) => !failedApps.has(a.name)),
+      );
     } catch (error) {
       return finish('stopped', `could not read the screen (${error instanceof Error ? error.message : String(error)})`);
     }
@@ -133,6 +148,7 @@ export async function* run(
       },
       offered: ops,
       decision: d,
+      answers: res.answers,
       jevMs: res.ms,
     };
 
@@ -194,10 +210,12 @@ export async function* run(
     }
 
     let text: string | undefined;
+    let textMs: number | undefined;
     if (d.op === 'TYPE' && el) {
       if (!writeText)
         return finish('stopped', 'typing needs a text helper (set TEXT_MODEL_API_KEY or AI_GATEWAY_API_KEY)');
       try {
+        const t = Date.now();
         const value = await writeText(
           {
             goal,
@@ -211,6 +229,7 @@ export async function* run(
           },
           opts.signal,
         );
+        textMs = Date.now() - t;
         if (value === null) return finish('blocked', `the goal does not say what to type into "${el.label}"`);
         text = value;
       } catch (error) {
@@ -221,7 +240,8 @@ export async function* run(
     const before = core.screenSignature();
     let outcome: string;
     try {
-      outcome = await execute(core, d.op, el, d.app, text, s.app);
+      const bundle = d.app ? (apps.find((a) => a.name === d.app)?.bundleId ?? d.app) : undefined;
+      outcome = await execute(core, d.op, el, bundle, text, s.app);
     } catch (error) {
       outcome = `error: ${firstLine(error instanceof Error ? error.message : String(error))}`;
     }
@@ -231,7 +251,16 @@ export async function* run(
     // (The signature ignores values on purpose — stable across dynamic content — so a toggle reports before → after instead.)
     const step: Step = { op: d.op, ...(label ? { target: label } : {}), ...(text ? { text } : {}), outcome };
     history.push(step);
-    yield { ...event, action: step };
+    yield { ...event, action: step, textMs };
+
+    // No harness underneath to refuse a repeat: the same action failing or
+    // changing nothing twice in a row ends the run instead of burning the budget.
+    const failed = outcome.startsWith('error') || outcome.endsWith('no visible change');
+    if (d.op === 'OPEN_APP' && d.app && outcome.startsWith('error')) failedApps.add(d.app);
+    const key = `${d.op}|${label ?? ''}|${text ?? ''}`;
+    repeatRun = failed && d.op !== 'WAIT' ? (key === lastKey ? repeatRun + 1 : 1) : 0;
+    lastKey = key;
+    if (repeatRun >= 2) return finish('blocked', `${d.op}${label ? ` "${label}"` : ''} had no effect twice in a row`);
   }
   return finish('budget', `step budget of ${maxSteps} reached before the goal was visibly done`);
 }
@@ -277,9 +306,6 @@ async function execute(
     case 'BACK':
       await core.goBack();
       return 'went back';
-    case 'HOME':
-      await core.goHome();
-      return 'went home';
     case 'OPEN_APP': {
       if (!app) throw new Error('OPEN_APP needs an app');
       await core.openApp(app, false);

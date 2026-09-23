@@ -13,7 +13,6 @@ export type Op =
   | 'SCROLL_DOWN'
   | 'SCROLL_UP'
   | 'BACK'
-  | 'HOME'
   | 'OPEN_APP'
   | 'WAIT'
   | 'DONE'
@@ -36,7 +35,6 @@ export const OPS: Record<Op, string> = {
   SCROLL_DOWN: 'Scroll down to reveal controls below the visible screen.',
   SCROLL_UP: 'Scroll up to reveal controls above the visible screen.',
   BACK: 'Go back to the previous screen.',
-  HOME: 'Go to the home screen.',
   OPEN_APP: 'Open a different app the goal needs.',
   WAIT: 'The screen is visibly loading; wait and look again.',
   DONE: 'Every requirement of the goal is visibly satisfied on this screen.',
@@ -71,7 +69,6 @@ export function buildRequest(goal: string, s: Screen, history: Step[], vetoed: R
     SCROLL_DOWN: true,
     SCROLL_UP: true,
     BACK: true,
-    HOME: true,
     OPEN_APP: s.apps.length > 0,
     WAIT: true,
     DONE: true,
@@ -88,6 +85,10 @@ export function buildRequest(goal: string, s: Screen, history: Step[], vetoed: R
       switches: s.switches.map((e, i) => ({ index: i + 1, ...describe(e) })),
       text_fields: s.fields.map((e, i) => ({ index: i + 1, ...describe(e) })),
     },
+    // The operation question must know which apps exist, or OPEN_APP looks
+    // speculative: seen live, BLOCKED 0.51 vs OPEN_APP 0.30 while the app
+    // head had Contacts at 1.00.
+    apps: s.apps,
     recent_actions: history.slice(-HISTORY_WINDOW).map((h) => {
       const r: { [k: string]: JevEntry } = { operation: h.op, outcome: h.outcome };
       if (h.target) r.target = h.target;

@@ -1,9 +1,9 @@
 {
   "date": "2026-09-23",
-  "scope": "Two goals in Settings on one local iOS Simulator (iPhone 17 Pro, iOS 26). Not a general phone-agent evaluation.",
-  "timing": "From the first observation through the final DONE, including Jev requests, device verbs, re-observations and per-step screenshots. Excludes simulator boot and the example's own setup/verification walks.",
+  "scope": "Three goals in two first-party apps on one local iOS Simulator (iPhone 17 Pro, iOS 26). Not a general phone-agent evaluation.",
+  "timing": "From the first observation through the final DONE, including Jev requests, text-helper calls, device verbs, re-observations and (for the About run) a screenshot per step. Excludes simulator boot and the examples' own setup/verification walks.",
   "jev": "typesafe-ai/jev via the Vercel AI Gateway (free tier)",
-  "text_model": "not exercised — neither goal types",
+  "text_model": "meta/llama-4-scout via the Vercel AI Gateway (free tier)",
   "platform": "macOS / iOS Simulator / @phone-use/sdk 0.5.1 (agent-device 0.19.3)",
   "runs": [
     {
@@ -41,17 +41,43 @@
       ],
       "log": "docs/runs/about-local.log",
       "media": "demo.gif is this run's per-step screenshots at the recorded step timings"
+    },
+    {
+      "goal": "Create a new contact whose first name is Ada and last name is Lovelace<unique>, and save it.",
+      "start": "Contacts list (relaunched, backed out of any open card); the unique last name confirmed absent",
+      "verified_by": "examples/new-contact.ts relaunches Contacts and finds \"Ada Lovelace<unique>\" through the list's search field",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 19385,
+      "decisions": 6,
+      "request_latencies_ms": [349, 439, 1375, 411, 1113, 374],
+      "text_latencies_ms": [339, 406],
+      "steps": [
+        "TAP \"Add\" → screen changed",
+        "TYPE \"First name\" ← \"Ada\" → screen changed",
+        "TYPE \"Last name\" ← \"LovelaceCQDL\" → screen changed",
+        "DONE → vetoed, independent check 0.07 (the form was not saved yet)",
+        "TAP \"Done\" → screen changed",
+        "DONE (independent check 0.68)"
+      ],
+      "repeat": "an earlier identical run (docs/runs/new-contact-local-5.log): 17591 ms, 6 decisions, verified",
+      "log": "docs/runs/new-contact-local-6.log"
     }
   ],
   "retained_failures": [
     {
       "goal": "Bold Text, first attempt",
-      "note": "Reported done in 2 decisions and verified, but the run had started ON the target screen: the example's goHome() had not taken effect before the first observation. The example now relaunches Settings to its root and waits; the number was discarded.",
+      "note": "Reported done in 2 decisions and the switch read back on — but the run had started ON the target screen: goHome() is a no-op on the local simulator backend (confirmed with a probe: Settings still frontmost 2.8 s later). The example now relaunches Settings to its root; HOME was removed from the action space.",
       "log": "docs/runs/bold-text-local-1.log"
     },
     {
+      "goal": "Create a contact, first attempts",
+      "note": "(1) 25 decisions of OPEN_APP on an app that failed to launch: the SDK lists third-party apps as \"Name (bundle)\" and Apple's own apps not at all, and nothing stopped a repeating failure. Fixed by parsing names, adding the built-in Apple apps, and a stop after the same action fails twice. (2) BLOCKED at 0.51 vs OPEN_APP 0.30 while the app head had Contacts at 1.00: the operation question could not see which apps existed. The app names are now part of the shared state. (3) A run that started on the previous run's contact card EDITED that contact's last name and passed a naive unique-name check. The example now starts on the list and the failure is kept as a warning about verification design.",
+      "logs": ["docs/runs/contact-local-1.log", "docs/runs/contact-local-2.log", "docs/runs/new-contact-local-1.log"]
+    },
+    {
       "goal": "Bold Text on a phone-use cloud phone",
-      "note": "The first RPC timed out (daemon under load from a concurrent benchmark). Cloud calls now go through resilient(): re-open on SESSION_NOT_FOUND, one retry for read-only calls, never for mutations.",
+      "note": "The first RPC timed out (daemon under load from a concurrent benchmark). Cloud calls now go through resilient(): re-open on SESSION_NOT_FOUND, one retry for read-only calls, never for mutations. No cloud timing is claimed.",
       "log": "docs/runs/bold-text-cloud-1.log"
     }
   ]

@@ -240,3 +240,42 @@ describe('loop', () => {
     expect(r.reason).toContain('HTTP 503');
   });
 });
+
+describe('apps', () => {
+  it('parses "Name (bundle)" entries, drops test runners, and adds the built-in apps', async () => {
+    const { parseApps, discoverApps, BUILTIN_APPS } = await import('../src/apps.ts');
+    expect(parseApps(['Mail (com.iosworld.benchmark.mail)', 'Foo-Runner (x.xctrunner)', 'com.bare.id'])).toEqual([
+      { name: 'Mail', bundleId: 'com.iosworld.benchmark.mail' },
+      { name: 'com.bare.id', bundleId: 'com.bare.id' },
+    ]);
+    const fake = new FakeBackend({ screens: [screen([], { appName: 'SpringBoard' })] });
+    const apps = await discoverApps(new Phone(fake));
+    expect(apps.some((a) => a.name === 'Contacts' && a.bundleId === 'com.apple.MobileAddressBook')).toBe(true);
+    expect(apps.length).toBeGreaterThanOrEqual(BUILTIN_APPS.length);
+  });
+
+  it('stops after the same failing action twice, and stops offering an app that failed to open', async () => {
+    const fake = new FakeBackend({
+      screens: [screen([row('e1', 'General', 100)], { appName: 'com.apple.Preferences' })],
+    });
+    const core = new Phone(fake);
+    core.openApp = async () => {
+      throw new Error('Simulator device failed to launch');
+    };
+    const seen: Wire[] = [];
+    const r = await runGoal(core, 'open Mail', {
+      jev: scripted([{ operation: { choice: 'OPEN_APP' }, app_target: { choice: '1' } }], seen),
+      text: null,
+      apps: [
+        { name: 'Mail', bundleId: 'com.x.mail' },
+        { name: 'Notes', bundleId: 'com.x.notes' },
+        { name: 'Calendar', bundleId: 'com.x.cal' },
+      ],
+    });
+    expect(r.status).toBe('blocked');
+    expect(r.reason).toContain('twice in a row');
+    // After the first failure Mail is no longer offered; the script's "1" then means Notes.
+    const offered = (seen[1]?.questions.app_target as { criteria: Record<string, string> } | undefined)?.criteria;
+    expect(Object.values(offered ?? {})).toEqual(['Notes', 'Calendar']);
+  });
+});
