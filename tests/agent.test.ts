@@ -279,3 +279,36 @@ describe('apps', () => {
     expect(Object.values(offered ?? {})).toEqual(['Notes', 'Calendar']);
   });
 });
+
+describe('avoid', () => {
+  it('withholds a control whose tap changed nothing from the next request', async () => {
+    const fake = new FakeBackend({
+      screens: [screen([row('e1', 'Dead Row', 100), row('e2', 'Live Row', 150)], { appName: 'Files' })],
+    });
+    const seen: Wire[] = [];
+    await runGoal(new Phone(fake), 'open the live row', {
+      jev: scripted(
+        [
+          { operation: { choice: 'TAP' }, tap_target: { choice: '1' } },
+          { operation: { choice: 'TAP' }, tap_target: { choice: '1' } },
+          { operation: { choice: 'BLOCKED' } },
+        ],
+        seen,
+      ),
+      text: null,
+      apps: [],
+    });
+    // Step 1 tapped "Dead Row" (no visible change); step 2 must not be offered it.
+    const second = (seen[1]?.state as { screen: { controls: Array<{ label: string }> } }).screen.controls;
+    expect(second.map((c) => c.label)).toEqual(['Live Row']);
+    expect(fake.calls.filter((c) => c.method === 'press').map((c) => c.args[0])).toEqual([{ ref: '@e1' }, { ref: '@e2' }]);
+  });
+
+  it('tolerates a one-unit rounding tie between the pick and the argmax', async () => {
+    const { parseAnswers, choice: ch } = await import('../src/jev.ts');
+    const q = { op: ch('?', { A: 'a', B: 'b', C: 'c' }) };
+    const r = parseAnswers({ answers: { op: { choice: 'A', confidence: 0.5, probabilities: { A: 0.34, B: 0.35, C: 0.31 } } } }, q);
+    expect(typeof r).not.toBe('string');
+    expect(parseAnswers({ answers: { op: { choice: 'A', confidence: 0.5, probabilities: { A: 0.3, B: 0.4, C: 0.3 } } } }, q)).toContain('most probable');
+  });
+});

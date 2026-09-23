@@ -63,7 +63,10 @@ function screenName(core: Phone): string {
 }
 
 /** Observe the device and build the action space for this step. */
-export async function readScreen(core: Phone, apps: App[]): Promise<Screen> {
+/** role|label — how an element is remembered across observations. */
+export const elementKey = (e: UiElement) => `${e.role}|${e.label}`;
+
+export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<string> = new Set()): Promise<Screen> {
   await core.observe();
   const vh = core.viewportHeight();
   const visible = core.interactiveElements().filter((e) => onScreen(e, vh));
@@ -87,7 +90,7 @@ export async function readScreen(core: Phone, apps: App[]): Promise<Screen> {
     // On a launcher, drop app icons from TAP so OPEN_APP is the one way to
     // launch: offering both split the probability between two right answers.
     controls: visible
-      .filter((e) => e.role !== 'Switch' && !(launcher && appNames.has(e.label.toLowerCase())))
+      .filter((e) => e.role !== 'Switch' && !(launcher && appNames.has(e.label.toLowerCase())) && !avoid.has(elementKey(e)))
       .slice(0, MAX_CONTROLS),
     switches: visible.filter((e) => e.role === 'Switch').slice(0, MAX_CONTROLS),
     fields: core

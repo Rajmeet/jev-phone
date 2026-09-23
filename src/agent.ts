@@ -7,7 +7,7 @@ import type { UiElement } from '@phone-use/sdk';
 import { type App, discoverApps } from './apps.ts';
 import { createJevClient, type JevAnswer, type JevClient } from './jev.ts';
 import { buildRequest, type Decision, type Op, resolve, type Step } from './policy.ts';
-import { type Phone, readScreen, refind, type Screen } from './screen.ts';
+import { elementKey, type Phone, readScreen, refind, type Screen } from './screen.ts';
 import { type TextHelper, textHelper } from './text.ts';
 
 export type AgentOptions = {
@@ -102,6 +102,10 @@ export async function* run(
   let decisions = 0;
   let apps = opts.apps;
   const failedApps = new Set<string>();
+  // Controls whose tap just errored or changed nothing are withheld from the
+  // next request, so Jev must pick differently (seen live: an element the
+  // device reported off-screen re-picked three times).
+  const avoid = new Map<string, number>();
   let lastKey: string | undefined;
   let repeatRun = 0;
 
@@ -119,9 +123,11 @@ export async function* run(
     if (!apps) apps = await discoverApps(core);
     let s: Screen;
     try {
+      for (const [k, until] of avoid) if (decisions >= until) avoid.delete(k);
       s = await readScreen(
         core,
         apps.filter((a) => !failedApps.has(a.name)),
+        new Set(avoid.keys()),
       );
     } catch (error) {
       return finish('stopped', `could not read the screen (${error instanceof Error ? error.message : String(error)})`);
@@ -257,6 +263,7 @@ export async function* run(
     // changing nothing twice in a row ends the run instead of burning the budget.
     const failed = outcome.startsWith('error') || outcome.endsWith('no visible change');
     if (d.op === 'OPEN_APP' && d.app && outcome.startsWith('error')) failedApps.add(d.app);
+    if (d.op === 'TAP' && el && failed) avoid.set(elementKey(el), decisions + 2);
     const key = `${d.op}|${label ?? ''}|${text ?? ''}`;
     repeatRun = failed && d.op !== 'WAIT' ? (key === lastKey ? repeatRun + 1 : 1) : 0;
     lastKey = key;

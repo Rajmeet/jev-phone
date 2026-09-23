@@ -82,6 +82,9 @@ const ENDPOINTS: Record<JevProvider, { base: string; path: string; model: string
 
 const RETRY_STATUS = new Set([408, 429, 500, 502, 503, 504, 529]);
 const PROB_TOLERANCE = 0.03;
+// Probabilities arrive rounded to 0.01 (gateway); a near-tie can make the
+// chosen label read one unit below another after rounding. Seen live.
+const ARGMAX_TOLERANCE = 0.011;
 
 export function createJevClient(opts: JevClientOptions = {}, env = process.env): JevClient {
   const provider = opts.provider ?? jevProvider(env);
@@ -233,7 +236,8 @@ export function parseAnswers(
       best = Math.max(best, v);
     }
     if (Math.abs(sum - 1) > PROB_TOLERANCE) return `choice "${id}": probabilities sum to ${sum.toFixed(3)}`;
-    if ((p[picked] as number) < best - 1e-9) return `choice "${id}": "${picked}" is not the most probable option`;
+    if ((p[picked] as number) < best - ARGMAX_TOLERANCE)
+      return `choice "${id}": "${picked}" is not the most probable option`;
     out[id] = { type: 'choice', choice: picked, confidence: a.confidence, probabilities: p as Record<string, number> };
   }
   return out;
