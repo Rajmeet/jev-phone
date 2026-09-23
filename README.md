@@ -91,6 +91,8 @@ For a cloud iPhone: `phone-use create ios`, then `eval "$(phone-use env <id>)"` 
 
 ## Use the library
 
+It is not on npm; add it from git (`bun add github:Rajmeet/jev-phone`) or copy `src/`.
+
 ```ts
 import { connectDevice, run } from 'jev-phone';
 
