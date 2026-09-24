@@ -1,11 +1,82 @@
 {
-  "date": "2026-09-23",
+  "date": "2026-09-24",
   "scope": "Three goals on one local iOS Simulator (iPhone 17 Pro, iOS 26), two on a local Android emulator over adb, and two on a phone-use cloud Android phone. Not a general phone-agent evaluation.",
   "timing": "From the first observation through the final DONE, including Jev requests, text-helper calls, device verbs, re-observations and (for the About run) a screenshot per step. Excludes simulator boot and the examples' own setup/verification walks.",
   "jev": "typesafe-ai/jev via the Vercel AI Gateway (free tier)",
   "text_model": "meta/llama-4-scout via the Vercel AI Gateway (free tier)",
   "platform": "macOS / iOS Simulator / @phone-use/sdk 0.5.1 (agent-device 0.19.3)",
   "runs": [
+    {
+      "goal": "In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.",
+      "device": "iPhone 17 Pro simulator",
+      "status": "done",
+      "verified": true,
+      "verified_by": "switch read back as 1",
+      "elapsed_ms": 5678,
+      "decisions": 4,
+      "request_latencies_ms": [
+        489,
+        248,
+        357,
+        313
+      ],
+      "log": "docs/runs/bold-text-local-3.log"
+    },
+    {
+      "goal": "Open Settings and go to General, then About",
+      "device": "iPhone 17 Pro simulator",
+      "status": "done",
+      "verified": true,
+      "verified_by": "final screen is About",
+      "elapsed_ms": 11800,
+      "decisions": 6,
+      "jev_avg_ms": 765,
+      "log": "docs/runs/about-local-2.log"
+    },
+    {
+      "goal": "Create a new contact whose first name is Ada and last name is LovelaceZ21P, and save it.",
+      "device": "iPhone 17 Pro simulator",
+      "status": "done",
+      "verified": true,
+      "verified_by": "found through Contacts search after a relaunch",
+      "elapsed_ms": 17857,
+      "decisions": 6,
+      "request_latencies_ms": [
+        657,
+        2522,
+        637,
+        514,
+        285,
+        305
+      ],
+      "text_latencies_ms": [
+        575,
+        841
+      ],
+      "log": "docs/runs/new-contact-local-7.log"
+    },
+    {
+      "goal": "In Settings, open Network & internet and turn on Airplane mode",
+      "device": "local Android emulator (adb)",
+      "status": "done",
+      "verified": true,
+      "verified_by": "adb shell settings get global airplane_mode_on: 0 \u2192 1",
+      "elapsed_ms": 15400,
+      "decisions": 4,
+      "jev_avg_ms": 354,
+      "log": "docs/runs/airplane-android-local-2.log"
+    },
+    {
+      "goal": "Create a new contact whose first name is Ada and last name is LovelaceLCL2, and save it.",
+      "device": "local Android emulator (adb)",
+      "status": "done",
+      "verified": true,
+      "verified_by": "adb content query on the contacts provider returns Ada LovelaceLCL2",
+      "elapsed_ms": 29700,
+      "decisions": 7,
+      "jev_avg_ms": 332,
+      "log": "docs/runs/contact-android-local-2.log"
+    },
     {
       "goal": "In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.",
       "start": "Settings root screen (relaunched); the switch forced OFF first",
@@ -26,7 +97,8 @@
         "TOGGLE \"Bold Text\" \u2192 0 \u2192 1",
         "DONE (independent check 0.87)"
       ],
-      "log": "docs/runs/bold-text-local-2.log"
+      "log": "docs/runs/bold-text-local-2.log",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "Open Settings and go to General, then About",
@@ -51,7 +123,8 @@
         "DONE (independent check 0.92)"
       ],
       "log": "docs/runs/about-local.log",
-      "media": "demo.gif is this run's per-step screenshots at the recorded step timings"
+      "media": "demo.gif is this run's per-step screenshots at the recorded step timings",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "Create a new contact whose first name is Ada and last name is Lovelace<unique>, and save it.",
@@ -82,7 +155,8 @@
         "DONE (independent check 0.68)"
       ],
       "repeat": "an earlier identical run (docs/runs/new-contact-local-5.log): 17591 ms, 6 decisions, verified",
-      "log": "docs/runs/new-contact-local-6.log"
+      "log": "docs/runs/new-contact-local-6.log",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "In Settings, open Network & internet and turn on Airplane mode",
@@ -101,7 +175,8 @@
         "TAP \"Airplane mode\" \u2192 no visible change (the signature ignores values)",
         "DONE (independent check 0.75)"
       ],
-      "log": "docs/runs/airplane-android-cloud-1.log"
+      "log": "docs/runs/airplane-android-cloud-1.log",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "Create a new contact whose first name is Ada and last name is LovelaceAND2, and save it.",
@@ -132,7 +207,8 @@
         "TAP \"Save\" \u2192 screen changed",
         "DONE (independent check 0.69)"
       ],
-      "log": "docs/runs/contact-android-cloud-2.log"
+      "log": "docs/runs/contact-android-cloud-2.log",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "In Settings, open Network & internet and turn on Airplane mode",
@@ -155,7 +231,8 @@
         "TAP \"Airplane mode\" \u2192 no visible change",
         "DONE (independent check 0.84)"
       ],
-      "log": "docs/runs/airplane-android-local-1.log"
+      "log": "docs/runs/airplane-android-local-1.log",
+      "note": "before the capture reduction (four tree reads per step)"
     },
     {
       "goal": "Create a new contact whose first name is Ada and last name is LovelaceLCL1, and save it.",
@@ -186,7 +263,8 @@
         "TAP \"Save\" \u2192 screen changed",
         "DONE (independent check 0.77)"
       ],
-      "log": "docs/runs/contact-android-local-1.log"
+      "log": "docs/runs/contact-android-local-1.log",
+      "note": "before the capture reduction (four tree reads per step)"
     }
   ],
   "retained_failures": [

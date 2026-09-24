@@ -6,6 +6,27 @@ Timing is from the first observation through the final `DONE`, including every J
 
 ## Verified runs
 
+Current code (two tree reads per step; 2026-09-24). Local iPhone 17 Pro simulator:
+
+| Goal | Decisions | Jev latency (ms) | Total | Verified |
+| --- | --- | --- | --- | --- |
+| Turn on Bold Text | 4 | 489 · 248 · 357 · 313 | **5.7 s** | switch read back as `1` |
+| Open General, then About | 6 | avg 765 | **11.8 s** | final screen About |
+| Create contact, save | 6 | 657 · 2522 · 637 · 514 · 285 · 305 (text 575, 841) | **17.9 s** | found by search after a relaunch |
+
+Local Android emulator (adb):
+
+| Goal | Decisions | Jev avg (ms) | Total | Verified |
+| --- | --- | --- | --- | --- |
+| Turn on Airplane mode | 4 | 354 | **15.4 s** | `airplane_mode_on` 0 → 1 |
+| Create contact, save | 7 | 332 | **29.7 s** | contacts provider returns the row |
+
+Logs: [bold-text-local-3](runs/bold-text-local-3.log), [about-local-2](runs/about-local-2.log), [new-contact-local-7](runs/new-contact-local-7.log), [airplane-android-local-2](runs/airplane-android-local-2.log), [contact-android-local-2](runs/contact-android-local-2.log).
+
+What changed: the loop used to read the accessibility tree four times per step (to build the action space, to re-find the target, inside the press, and again to record the outcome). The verb's own read now reports the outcome and the start-of-step read is skipped while the cache is fresh — two reads per step. A read is ~0.7 s on the simulator and ~2 s on Android, so this roughly halved every run below.
+
+### Before the capture reduction (2026-09-23), for the record
+
 Local iPhone 17 Pro simulator:
 
 | Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
