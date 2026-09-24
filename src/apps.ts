@@ -4,7 +4,7 @@
 // (200+, mostly system), so only the curated list below is offered, filtered
 // to what is installed. Jev sees names; the executor opens ids. Test runners
 // never count as apps.
-import type { DeviceCore } from '@phone-use/sdk';
+import type { Phone } from './screen.ts';
 
 export type App = { name: string; bundleId: string };
 
@@ -45,15 +45,11 @@ export const ANDROID_APPS: Array<{ name: string; packages: string[] }> = [
 ];
 
 const RUNNER = /-Runner \(|xctrunner\)/;
-const ANDROID_PACKAGE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i;
 
 /** A raw `pm list packages` dump: bare dotted ids, no "Name (id)" entries. */
 export function looksLikeAndroid(listing: string[]): boolean {
-  return (
-    listing.length > 0 &&
-    listing.every((e) => ANDROID_PACKAGE.test(e)) &&
-    listing.some((e) => e.startsWith('com.android.'))
-  );
+  // `pm list packages` includes bare names like "android"; iOS entries carry "(bundle)".
+  return listing.some((e) => e.startsWith('com.android.')) && !listing.some((e) => e.includes('('));
 }
 
 /** Parse the SDK's "Name (bundle.id)" entries; a bare bundle id names itself. */
@@ -68,9 +64,10 @@ export function parseApps(listing: string[]): App[] {
 }
 
 /** Installed third-party apps plus the built-in ones, deduplicated by bundle id. */
-export async function discoverApps(core: DeviceCore): Promise<App[]> {
+export async function discoverApps(core: Phone): Promise<App[]> {
   const listing = await core.listApps().catch(() => []);
-  if (looksLikeAndroid(listing)) {
+  if (core.platform === 'unknown') core.platform = looksLikeAndroid(listing) ? 'android' : 'ios';
+  if (core.platform === 'android') {
     const have = new Set(listing);
     return ANDROID_APPS.flatMap((a) => {
       const pkg = a.packages.find((p) => have.has(p));

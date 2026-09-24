@@ -69,6 +69,7 @@ export async function connectDevice(spec: DeviceSpec = process.env.JEV_PHONE_DEV
     const serial = spec.startsWith('android:') ? spec.slice('android:'.length) : undefined;
     const device = await android.connect(serial, { idleTimeoutMs: false });
     const core = new Phone(device.backend);
+    core.platform = 'android';
     return { core, name: device.name ?? device.id, close: () => device.close() };
   }
   const device: Device =
@@ -76,5 +77,6 @@ export async function connectDevice(spec: DeviceSpec = process.env.JEV_PHONE_DEV
       ? await ios.launch({ idleTimeoutMs: false })
       : await ios.connect(spec === 'connect' ? undefined : spec, { idleTimeoutMs: false });
   const core = new Phone(device.backend);
+  core.platform = 'ios';
   return { core, name: device.name ?? device.id, close: () => device.close() };
 }

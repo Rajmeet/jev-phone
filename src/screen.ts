@@ -6,6 +6,8 @@ import type { App } from './apps.ts';
 
 /** DeviceCore plus the raw node cache (labels of static text, not just controls). */
 export class Phone extends DeviceCore {
+  /** Set once the app list has been read (discoverApps) or by connectDevice. */
+  platform: 'ios' | 'android' | 'unknown' = 'unknown';
   nodes(): SnapshotNode[] {
     return this.cachedNodes;
   }
@@ -42,6 +44,37 @@ export function onScreen(e: UiElement, vh: number, vw = Number.POSITIVE_INFINITY
   const cy = e.rect.y + e.rect.height / 2;
   const cx = e.rect.x + e.rect.width / 2;
   return cy > 0 && cy < vh && cx > 0 && cx < vw && e.enabled !== false && !e.blocked;
+}
+
+// Android exposes inputs by widget class (EditText and friends), which the
+// SDK's iOS-shaped inputFields() does not know; every static label there is a
+// TextView, which iOS treats as an editable body. So each platform gets its own rule.
+const ANDROID_INPUT = new Set(['EditText', 'AutoCompleteTextView', 'MultiAutoCompleteTextView', 'SearchView']);
+
+export function editableFields(core: Phone): UiElement[] {
+  if (core.platform !== 'android') return core.inputFields(true);
+  // Cloud phones normalise Android inputs to TextField; a local adb tree keeps the widget class.
+  const known = core.inputFields(false);
+  const seen = new Set(known.map((e) => e.ref));
+  const raw = core
+    .nodes()
+    .filter(
+      (n) =>
+        n.ref &&
+        n.rect &&
+        ANDROID_INPUT.has(n.role ?? n.type ?? '') &&
+        !seen.has(n.ref.startsWith('@') ? n.ref : `@${n.ref}`),
+    )
+    .map((n) => ({
+      ref: n.ref!.startsWith('@') ? n.ref! : `@${n.ref}`,
+      label: (n.label ?? n.identifier ?? '').trim(),
+      role: n.role ?? n.type ?? '',
+      value: n.value,
+      rect: n.rect,
+      enabled: n.enabled,
+      blocked: n.interactionBlocked,
+    }));
+  return [...known, ...raw];
 }
 
 /** The viewport width from the Application root (the SDK exposes only the height). */
@@ -106,8 +139,7 @@ export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<st
       )
       .slice(0, MAX_CONTROLS),
     switches: visible.filter((e) => e.role === 'Switch').slice(0, MAX_CONTROLS),
-    fields: core
-      .inputFields(true)
+    fields: editableFields(core)
       .filter((e) => onScreen(e, vh, vw))
       .slice(0, MAX_CONTROLS),
     apps: others,
@@ -124,7 +156,7 @@ export async function refind(core: Phone, target: UiElement, field: boolean): Pr
   await core.observe();
   const vh = core.viewportHeight();
   const vw = viewportWidth(core);
-  const pool = (field ? core.inputFields(true) : core.interactiveElements()).filter((e) => onScreen(e, vh, vw));
+  const pool = (field ? editableFields(core) : core.interactiveElements()).filter((e) => onScreen(e, vh, vw));
   const centre = (e: UiElement) => (e.rect ? [e.rect.x + e.rect.width / 2, e.rect.y + e.rect.height / 2] : [0, 0]);
   const [ox, oy] = centre(target) as [number, number];
   const dist = (e: UiElement) => {
