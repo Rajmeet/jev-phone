@@ -1,6 +1,6 @@
 // Where the phone is. Scripts never branch on locality: the same DeviceCore
 // drives a booted local simulator, a fresh one, or a phone-use cloud phone.
-import { createCloudSandboxBackend, type Device, type DeviceBackend, ios } from '@phone-use/sdk';
+import { android, createCloudSandboxBackend, type Device, type DeviceBackend, ios } from '@phone-use/sdk';
 import { Phone } from './screen.ts';
 
 const READ_ONLY = new Set(['snapshot', 'screenshot', 'listApps']);
@@ -47,7 +47,7 @@ export function resilient<T extends DeviceBackend>(backend: T): T {
   });
 }
 
-export type DeviceSpec = 'cloud' | 'connect' | 'launch' | (string & {});
+export type DeviceSpec = 'cloud' | 'connect' | 'launch' | 'android' | (string & {});
 
 export type Connected = { core: Phone; name: string; close: () => Promise<void> };
 
@@ -57,12 +57,19 @@ export type Connected = { core: Phone; name: string; close: () => Promise<void> 
  * - `connect` — the booted iOS Simulator on this Mac (default)
  * - `launch`  — boot a dedicated simulator, deleted on close
  * - `<udid>`  — a specific simulator
+ * - `android` — the adb device / emulator attached to this machine (`android:<serial>` to pick one)
  */
 export async function connectDevice(spec: DeviceSpec = process.env.JEV_PHONE_DEVICE ?? 'connect'): Promise<Connected> {
   if (spec === 'cloud') {
     const backend = resilient(createCloudSandboxBackend());
     const core = new Phone(backend);
     return { core, name: 'cloud phone', close: () => core.closeSession().catch(() => undefined) };
+  }
+  if (spec === 'android' || spec.startsWith('android:')) {
+    const serial = spec.startsWith('android:') ? spec.slice('android:'.length) : undefined;
+    const device = await android.connect(serial, { idleTimeoutMs: false });
+    const core = new Phone(device.backend);
+    return { core, name: device.name ?? device.id, close: () => device.close() };
   }
   const device: Device =
     spec === 'launch'

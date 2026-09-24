@@ -1,5 +1,5 @@
 export { type AgentEvent, type AgentOptions, type AgentResult, DESTRUCTIVE, run, runGoal } from './agent.ts';
-export { type App, BUILTIN_APPS, discoverApps, parseApps } from './apps.ts';
+export { ANDROID_APPS, type App, BUILTIN_APPS, discoverApps, looksLikeAndroid, parseApps } from './apps.ts';
 export { type Connected, connectDevice, type DeviceSpec } from './device.ts';
 export {
   type ChoiceAnswer,
