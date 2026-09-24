@@ -6,9 +6,9 @@ Drive a phone with a model that never writes a word.
 
 Search Maps for a coffee shop and get walking directions. Find an article in Wikipedia and save it for later. Open Contacts, create a contact, save it. Turn on Airplane mode. Each step is one call to [Jev](https://docs.typesafe.ai/concepts/system-one), TypeSafe's System One model, which looks at the screen's elements and picks what to tap. A small LLM types when something needs typing. [phone-use](https://www.npmjs.com/package/@phone-use/sdk) runs it on an iOS Simulator, an Android device, or a cloud phone.
 
-<img src="demo.gif" alt="Apple Maps: search for Blue Bottle Coffee, open it, walking route" width="270" />
+<img src="montage.gif" alt="Three phones side by side: Maps directions on iOS, a Wikipedia article saved on iOS, a contact created on Android" width="100%" />
 
-*Apple Maps, one goal: find Blue Bottle Coffee, open it, get walking directions. 16.5 s, 5 decisions, played at the recorded speed. The route on screen at the end is real.*
+*Three goals, recorded speed, side by side. Left: Apple Maps, find Blue Bottle Coffee and get walking directions, 16.5 s. Middle: Wikipedia, search Lisbon, open the article, save it, 28.4 s. Right: Android Contacts, create and save a contact, 32.1 s. Each was checked afterwards by reading the phone: the route in the tree, the article in the Saved tab, the row in the contacts database.*
 
 Jev is in early access, but the [Vercel AI Gateway](https://vercel.com/ai-gateway) serves it today. One gateway key runs everything here.
 
