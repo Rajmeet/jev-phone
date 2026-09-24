@@ -103,7 +103,12 @@ export function createJevClient(opts: JevClientOptions = {}, env = process.env):
   ): Promise<JevResult> {
     const start = performance.now();
     const elapsed = () => Math.round(performance.now() - start);
-    if (!apiKey) return { ok: false, reason: `${ep.key} is not set`, ms: 0 };
+    if (!apiKey)
+      return {
+        ok: false,
+        reason: `no Jev key: set AI_GATEWAY_API_KEY (Vercel AI Gateway, no waitlist) or TYPESAFE_API_KEY in .env`,
+        ms: 0,
+      };
     for (const [id, q] of Object.entries(questions)) {
       if (q.type === 'choice' && Object.keys(q.criteria).length < 2)
         return { ok: false, reason: `choice "${id}" needs ≥2 options`, ms: 0 };
