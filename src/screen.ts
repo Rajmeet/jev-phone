@@ -110,7 +110,8 @@ function screenName(core: Phone): string {
 export const elementKey = (e: UiElement) => `${e.role}|${e.label}`;
 
 export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<string> = new Set()): Promise<Screen> {
-  await core.observe();
+  // The previous verb already re-read the tree; reuse it while it is fresh.
+  if (core.cacheAgeMs() > 1500) await core.observe();
   const vh = core.viewportHeight();
   const vw = viewportWidth(core);
   const visible = core.interactiveElements().filter((e) => onScreen(e, vh, vw));

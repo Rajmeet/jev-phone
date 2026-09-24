@@ -64,6 +64,8 @@ const LAUNCH_SETTLE_MS = 12_000;
 const LAUNCH_MIN_CONTROLS = 5;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const firstLine = (s: string) => (s.split('\n')[0] ?? '').slice(0, 160);
+const changed = (did: boolean | undefined) =>
+  did === undefined ? '' : did ? ' — screen changed' : ' — no visible change';
 
 /** Launches are asynchronous: wait until the new app is frontmost AND populated. */
 async function settleAfterLaunch(core: Phone, before: string | undefined): Promise<void> {
@@ -243,7 +245,9 @@ export async function* run(
       }
     }
 
-    const before = core.screenSignature();
+    // Each verb reports its own outcome from the ONE tree read it already
+    // does afterwards (press/fill self-diff; the others observe once). No
+    // extra capture here: a tree read is ~1 s on iOS, ~3 s on Android.
     let outcome: string;
     try {
       const bundle = d.app ? (apps.find((a) => a.name === d.app)?.bundleId ?? d.app) : undefined;
@@ -251,10 +255,6 @@ export async function* run(
     } catch (error) {
       outcome = `error: ${firstLine(error instanceof Error ? error.message : String(error))}`;
     }
-    await core.observe().catch(() => undefined);
-    if (!outcome.startsWith('error') && d.op !== 'TOGGLE')
-      outcome += core.screenSignature() !== before ? ' — screen changed' : ' — no visible change';
-    // (The signature ignores values on purpose — stable across dynamic content — so a toggle reports before → after instead.)
     const step: Step = { op: d.op, ...(label ? { target: label } : {}), ...(text ? { text } : {}), outcome };
     history.push(step);
     yield { ...event, action: step, textMs };
@@ -288,8 +288,8 @@ async function execute(
   switch (op) {
     case 'TAP': {
       const e = target();
-      await core.press(e.ref);
-      return `tapped "${e.label}"`;
+      const ev = await core.press(e.ref);
+      return `tapped "${e.label}"${changed(ev.changed)}`;
     }
     case 'TOGGLE': {
       const e = target();
@@ -303,21 +303,27 @@ async function execute(
     }
     case 'TYPE': {
       const e = target();
-      await core.fill(e.ref, text ?? '');
-      return `typed ${JSON.stringify(text)} into "${e.label}"`;
+      const ev = await core.fill(e.ref, text ?? '');
+      return `typed ${JSON.stringify(text)} into "${e.label}"${changed(ev.changed)}`;
     }
     case 'SCROLL_DOWN':
-    case 'SCROLL_UP':
+    case 'SCROLL_UP': {
+      const before = core.screenSignature();
       await core.scroll(op === 'SCROLL_DOWN' ? 'down' : 'up');
-      return op === 'SCROLL_DOWN' ? 'scrolled down' : 'scrolled up';
-    case 'BACK':
+      await core.observe();
+      return `${op === 'SCROLL_DOWN' ? 'scrolled down' : 'scrolled up'}${changed(core.screenSignature() !== before)}`;
+    }
+    case 'BACK': {
+      const before = core.screenSignature();
       await core.goBack();
-      return 'went back';
+      await core.observe();
+      return `went back${changed(core.screenSignature() !== before)}`;
+    }
     case 'OPEN_APP': {
       if (!app) throw new Error('OPEN_APP needs an app');
       await core.openApp(app, false);
       await settleAfterLaunch(core, currentApp);
-      return `opened ${app}`;
+      return `opened ${app}${changed(core.currentApp() !== currentApp)}`;
     }
     default:
       await sleep(1000);
