@@ -10,6 +10,7 @@ Current code (two tree reads per step; 2026-09-24). Local iPhone 17 Pro simulato
 
 | Goal | Decisions | Jev latency (ms) | Total | Verified |
 | --- | --- | --- | --- | --- |
+| Maps: find Blue Bottle Coffee, open it, walking route | 5 | 527 · 999 · 1027 · 467 · 268 | **16.5 s** | tree shows route "2 min · 200 ft" to Blue Bottle Coffee |
 | Turn on Bold Text | 4 | 489 · 248 · 357 · 313 | **5.7 s** | switch read back as `1` |
 | Open General, then About | 6 | avg 765 | **11.8 s** | final screen About |
 | Create contact, save | 6 | 657 · 2522 · 637 · 514 · 285 · 305 (text 575, 841) | **17.9 s** | found by search after a relaunch |
@@ -21,7 +22,9 @@ Local Android emulator (adb):
 | Turn on Airplane mode | 4 | 354 | **15.4 s** | `airplane_mode_on` 0 → 1 |
 | Create contact, save | 7 | 332 | **29.7 s** | contacts provider returns the row |
 
-Logs: [bold-text-local-3](runs/bold-text-local-3.log), [about-local-2](runs/about-local-2.log), [new-contact-local-7](runs/new-contact-local-7.log), [airplane-android-local-2](runs/airplane-android-local-2.log), [contact-android-local-2](runs/contact-android-local-2.log).
+Steps, Maps: `TYPE search ← "Blue Bottle Coffee"` (text helper) → `TAP` the result card → `TAP Directions` (re-decided once: the card re-rendered between deciding and acting) → `TAP 2 min, walking` → `DONE` (0.76). The simulator was given a location at the Ferry Building; a first attempt without one waited forever on a route that could never compute, which is why consecutive WAITs are now capped at three ([log](runs/maps-local-1.log)). The demo GIF is this run's frames at the recorded step timings.
+
+Logs: [directions-local-1](runs/directions-local-1.log), [bold-text-local-3](runs/bold-text-local-3.log), [about-local-2](runs/about-local-2.log), [new-contact-local-7](runs/new-contact-local-7.log), [airplane-android-local-2](runs/airplane-android-local-2.log), [contact-android-local-2](runs/contact-android-local-2.log).
 
 What changed: the loop used to read the accessibility tree four times per step (to build the action space, to re-find the target, inside the press, and again to record the outcome). The verb's own read now reports the outcome and the start-of-step read is skipped while the cache is fresh — two reads per step. A read is ~0.7 s on the simulator and ~2 s on Android, so this roughly halved every run below.
 

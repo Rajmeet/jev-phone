@@ -110,6 +110,7 @@ export async function* run(
   const avoid = new Map<string, number>();
   let lastKey: string | undefined;
   let repeatRun = 0;
+  let waitRun = 0;
 
   const finish = (status: AgentResult['status'], reason: string): AgentResult => ({
     status,
@@ -180,6 +181,14 @@ export async function* run(
       continue;
     }
     vetoed.clear();
+    // Three WAITs in a row and the screen is not loading, whatever Jev thinks:
+    // withhold WAIT for the next decision so it must choose something else
+    // (Maps live: eleven WAITs on a route that would never load).
+    waitRun = d.op === 'WAIT' ? waitRun + 1 : 0;
+    if (waitRun >= 3) {
+      vetoed.add('WAIT');
+      waitRun = 0;
+    }
     if (d.op === 'BLOCKED') {
       yield { ...event, status: 'blocked', reason: 'no offered operation makes progress' };
       return finish('blocked', 'Jev found no offered operation that makes progress');

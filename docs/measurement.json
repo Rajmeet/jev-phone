@@ -7,6 +7,31 @@
   "platform": "macOS / iOS Simulator / @phone-use/sdk 0.5.1 (agent-device 0.19.3)",
   "runs": [
     {
+      "goal": "In Maps, search for Blue Bottle Coffee, open the first result and get walking directions to it. Stop when the walking route is showing.",
+      "device": "iPhone 17 Pro simulator (location set to the Ferry Building)",
+      "status": "done",
+      "verified": true,
+      "verified_by": "accessibility tree shows the route row '2 min, 11:53 ETA \u00b7 200 ft, Mostly flat' and Blue Bottle Coffee as destination",
+      "elapsed_ms": 16503,
+      "decisions": 5,
+      "request_latencies_ms": [
+        527,
+        999,
+        1027,
+        467,
+        268
+      ],
+      "steps": [
+        "TYPE \"Apple Maps\" \u2190 \"Blue Bottle Coffee\" \u2192 screen changed",
+        "TAP \"Blue Bottle Coffee, 200 ft \u00b7 1 Ferry Building\" \u2192 screen changed",
+        "TAP \"Directions\" \u2192 stale, decided again",
+        "TAP \"2 min, walking\" \u2192 screen changed",
+        "DONE (independent check 0.76)"
+      ],
+      "log": "docs/runs/directions-local-1.log",
+      "media": "demo.gif"
+    },
+    {
       "goal": "In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.",
       "device": "iPhone 17 Pro simulator",
       "status": "done",
@@ -291,6 +316,11 @@
       "goal": "Android, first contact attempt",
       "note": "Immediate HTTP 503 from the gateway: the Android app list (223 packages) had gone into the request whole, 24 KB. looksLikeAndroid had rejected the listing because 'android' has no dot. Fixed; the tiny and head-less requests succeeded throughout, so it was size, not the service.",
       "log": "docs/runs/contact-android-cloud-1.log"
+    },
+    {
+      "goal": "Maps directions, first attempt",
+      "note": "The simulator had no location, so the route stayed on 'Loading\u2026' forever and Jev chose WAIT eleven times (correctly, given the screen); a gateway 503 ended it. Fixed by setting a simulated location and capping consecutive WAITs at three.",
+      "log": "docs/runs/maps-local-1.log"
     }
   ]
 }
