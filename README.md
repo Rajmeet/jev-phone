@@ -162,7 +162,6 @@ One runtime dependency. `bun run check` runs the linter, the type checker, and t
 
 - [jev-ultrafast](https://github.com/browser-use/jev-ultrafast), the browser agent this design follows.
 - [phone-use](https://app.phoneuse.dev), the SDK underneath, its CLI, and the cloud phones. [npm](https://www.npmjs.com/package/phone-use)
-- [mobile-jev](https://github.com/droidrun/mobile-jev), droidrun's Jev agent for Android.
 - [TypeSafe: System One models](https://docs.typesafe.ai/concepts/system-one)
 
 MIT.
