@@ -10,7 +10,7 @@ Search Maps for a coffee shop and get walking directions. Find an article in Wik
 
 *Three goals, recorded speed, side by side. Left: Apple Maps, find Blue Bottle Coffee and get walking directions, 16.5 s. Middle: Wikipedia, search Lisbon, open the article, save it, 28.4 s. Right: Android Contacts, create and save a contact, 32.1 s. Each was checked afterwards by reading the phone: the route in the tree, the article in the Saved tab, the row in the contacts database.*
 
-Jev is in early access, but the [Vercel AI Gateway](https://vercel.com/ai-gateway) serves it today, and everything here ran on a free-tier gateway key: Jev calls were billed at $0, and the text helper costs a fraction of a cent per run. One key, no waitlist.
+Jev is in early access, but the [Vercel AI Gateway](https://vercel.com/ai-gateway) serves it today, and everything here ran on a free-tier gateway key and cost nothing: Jev and the text helper both. One key, no waitlist.
 
 ## Quickstart
 
