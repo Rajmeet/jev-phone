@@ -3,7 +3,7 @@
 // through the text helper, and the DONE veto (Jev tends to say DONE before
 // the form is saved; the independent check disagrees, and it taps Done).
 //
-//   bun examples/new-contact.ts [--device connect|launch|cloud|<udid>]
+//   bun examples/new-contact.ts [--device connect|launch|android|cloud|<udid>]
 import { connectDevice, run } from '../src/index.ts';
 
 const args = process.argv.slice(2);

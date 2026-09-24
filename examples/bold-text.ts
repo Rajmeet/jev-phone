@@ -2,7 +2,7 @@
 // INDEPENDENTLY of the agent's DONE — a DONE choice is not proof of success.
 // Prints a measurement record (docs/measurement.json is a list of these).
 //
-//   bun examples/bold-text.ts [--device connect|launch|cloud|<udid>] [--reset]
+//   bun examples/bold-text.ts [--device connect|launch|android|cloud|<udid>]
 import { connectDevice, run } from '../src/index.ts';
 
 const GOAL = 'In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.';

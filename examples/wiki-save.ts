@@ -2,7 +2,7 @@
 // then verify from the Saved tab, not from DONE. Needs the Wikipedia app
 // installed on the simulator (App Store build or the open-source app).
 //
-//   bun examples/wiki-save.ts [--device connect|launch|cloud|<udid>]
+//   bun examples/wiki-save.ts [--device connect|launch|android|cloud|<udid>]
 import { mkdirSync } from 'node:fs';
 import { connectDevice, run } from '../src/index.ts';
 

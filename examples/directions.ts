@@ -4,7 +4,7 @@
 // step (the README demo). The simulator needs a location:
 //   xcrun simctl location <udid> set 37.7955,-122.3937   (Ferry Building, SF)
 //
-//   bun examples/directions.ts [--device connect|launch|cloud|<udid>]
+//   bun examples/directions.ts [--device connect|launch|android|cloud|<udid>]
 import { mkdirSync } from 'node:fs';
 import { connectDevice, run } from '../src/index.ts';
 

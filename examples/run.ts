@@ -3,7 +3,7 @@
 //   bun examples/run.ts "Open Settings and go to General, then About"
 //   bun examples/run.ts --device cloud --screenshots docs/runs/demo "…"
 //
-// --device connect|launch|cloud|<udid>   (default: JEV_PHONE_DEVICE or connect)
+// --device connect|launch|android|cloud|<udid>   (default: JEV_PHONE_DEVICE or connect)
 // --screenshots <dir>                   save a screenshot per step (for demos)
 // --allow-destructive                   permit taps on Delete/Pay/Send-style controls
 // --json                                print the final result as JSON
@@ -32,7 +32,7 @@ const json = has('--json');
 const debug = has('--debug');
 const goal = args.join(' ').trim();
 if (!goal) {
-  console.error('usage: bun examples/run.ts [--device connect|launch|cloud|<udid>] [--screenshots <dir>] "<goal>"');
+  console.error('usage: bun examples/run.ts [--device connect|launch|android|cloud|<udid>] [--screenshots <dir>] "<goal>"');
   process.exit(1);
 }
 if (screenshotDir) mkdirSync(screenshotDir, { recursive: true });
