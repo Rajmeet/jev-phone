@@ -32,7 +32,9 @@ const json = has('--json');
 const debug = has('--debug');
 const goal = args.join(' ').trim();
 if (!goal) {
-  console.error('usage: bun examples/run.ts [--device connect|launch|android|cloud|<udid>] [--screenshots <dir>] "<goal>"');
+  console.error(
+    'usage: bun examples/run.ts [--device connect|launch|android|cloud|<udid>] [--screenshots <dir>] "<goal>"',
+  );
   process.exit(1);
 }
 if (screenshotDir) mkdirSync(screenshotDir, { recursive: true });
