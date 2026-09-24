@@ -4,13 +4,24 @@ Everything here was recorded on 2026-09-23 on one local iOS Simulator (iPhone 17
 
 Timing is from the first observation through the final `DONE`, including every Jev request, text-helper call, device verb, re-observation and (for the About run) a screenshot per step. It excludes simulator boot and the examples' own setup and verification walks.
 
-## Three verified runs
+## Verified runs
+
+Local iPhone 17 Pro simulator:
 
 | Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
 | --- | --- | --- | --- | --- | --- |
 | Turn on Bold Text (Accessibility → Display & Text Size) | Settings root, switch forced OFF | 4 | 515 · 372 · 385 · 313 | **11.2 s** | switch read back as `1` |
 | Open General, then About | Display & Text Size (left by the previous run) | 5 | 393 · 264 · 263 · 263 · 1210 | **14.9 s** | final screenshot shows About |
 | Create contact Ada Lovelace‹unique›, save | Contacts list, name confirmed absent | 6 | 349 · 439 · 1375 · 411 · 1113 · 374 | **19.4 s** | found by search after a relaunch |
+
+Cloud Android phone (phone-use, Pixel-class emulator, 2026-09-24), same policy, `--device cloud`:
+
+| Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
+| --- | --- | --- | --- | --- | --- |
+| Turn on Airplane mode (Network & internet) | already on Network & internet | 2 | 417 · 501 | **13.0 s** | tree reads "Airplane mode is on" |
+| Create contact Ada Lovelace‹unique›, save | launcher, Contacts past its sign-in wall | 6 | 460 · 257 · 396 · 498 · 411 · 2330 | **54.8 s** | "Ada LovelaceAND2" in the Contacts list |
+
+Steps, Android contact: `OPEN_APP Contacts` → `TAP Create contact` → `TYPE First name ← "Ada"` (text helper 1129 ms) → `TYPE Last name` (479 ms) → `TAP Save` → `DONE` (0.69). The decisions match the iPhone run; the device side is ~10 s per step on the cloud emulator against ~3 s locally. Two Android-specific findings shaped the code: `pm list packages` returns 200+ packages (a 24 KB request the gateway answered with 503) so only a curated, installed-filtered list is offered; and every Android label is a `TextView`, which the iOS rule counts as an editable body, so fields are detected per platform. Logs: [airplane](runs/airplane-android-cloud-1.log), [contact](runs/contact-android-cloud-2.log).
 
 Steps, Bold Text: `TAP Accessibility` → `TAP Display & Text Size` → `TOGGLE Bold Text (0 → 1)` → `DONE` (independent check 0.87).
 

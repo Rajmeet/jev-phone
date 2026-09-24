@@ -4,7 +4,7 @@
 
 Give it one goal. [TypeSafe's Jev](https://docs.typesafe.ai/concepts/system-one) picks an operation and a target from what the screen actually offers — in one request, in a few hundred milliseconds, with probabilities instead of prose. [phone-use](https://github.com/Rajmeet/phone-use) executes it on a real iOS Simulator or a cloud iPhone. A small LLM writes text only when the operation is `TYPE`.
 
-**Bold Text on in 11.2 s and 4 decisions. A new contact typed and saved in 19.4 s and 6 decisions.** Both verified by reading the phone afterwards, not by trusting the model.
+**iOS and Android.** Bold Text on in 11.2 s and 4 decisions; a new contact typed and saved in 19.4 s on an iPhone simulator and in 54.8 s on a cloud Android phone, 6 decisions each. All verified by reading the phone afterwards, not by trusting the model.
 
 <img src="demo.gif" alt="Jev navigating Settings to the About screen, at recorded speed" width="270" />
 
@@ -51,7 +51,7 @@ There are no app-specific scripts and no prepared field values in the policy. Th
 
 ## Try it
 
-You need [Bun](https://bun.sh), Xcode with a booted iOS Simulator (or a phone-use cloud phone), and a Jev key.
+**Requirements:** [Bun](https://bun.sh); a phone — a booted iOS Simulator (macOS + Xcode), an Android emulator or device visible to `adb`, or a phone-use cloud phone (iOS or Android, no Mac needed); and a Jev key. Typing also needs a text-model key — the gateway key covers both.
 
 ```bash
 git clone https://github.com/Rajmeet/jev-phone.git
@@ -87,7 +87,7 @@ The contact run is also where the done veto earns its keep: with both names type
 
 Jev is reachable two ways: TypeSafe's API (`TYPESAFE_API_KEY`) or the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`AI_GATEWAY_API_KEY`, model `typesafe-ai/jev`). The text helper for `TYPE` speaks the OpenAI chat-completions dialect and defaults to the gateway with Llama 4 Scout, reusing the same key; point `TEXT_MODEL_BASE_URL` / `TEXT_MODEL` at anything compatible.
 
-For a cloud iPhone: `phone-use create ios`, then `eval "$(phone-use env <id>)"` and `--device cloud`.
+For Android: `--device android` (the adb device/emulator on this machine). For a cloud phone, iOS or Android: `phone-use create ios` / `phone-use create android`, then `eval "$(phone-use env <id>)"` and `--device cloud`. Cloud phones are early: they expire after 15 minutes and heavy screens can wedge the runner; use a local simulator for the demo.
 
 ## Use the library
 
@@ -96,7 +96,7 @@ It is not on npm; add it from git (`bun add github:Rajmeet/jev-phone`) or copy `
 ```ts
 import { connectDevice, run } from 'jev-phone';
 
-const phone = await connectDevice('connect'); // booted simulator; 'launch' | 'cloud' | '<udid>'
+const phone = await connectDevice('connect'); // booted simulator; 'launch' | 'android' | 'cloud' | '<udid>'
 for await (const step of run(phone.core, 'Turn on Bold Text in Settings')) {
   console.log(step.decision.op, step.decision.element?.label, step.jevMs);
 }
@@ -133,9 +133,9 @@ About 1,100 lines of TypeScript including comments, one runtime dependency (`@ph
 
 ## Evidence and limits
 
-Three goals on one local simulator, all verified independently: **Bold Text on in 11.2 s / 4 decisions** from the Settings root, **General → About in 14.9 s / 5 decisions** from two screens deep in another section, and **a contact created in 19.4 s / 6 decisions** with two typed values (text helper 339 and 406 ms). Jev latency was 260–550 ms per decision, with two outliers at 1.1–1.4 s on the busiest screens. Full records, and the five discarded attempts with what each one changed, are in [performance.md](docs/performance.md) and [measurement.json](docs/measurement.json).
+Five verified runs across iOS and Android: **Bold Text on in 11.2 s / 4 decisions** from the Settings root, **General → About in 14.9 s / 5 decisions** from two screens deep in another section, and **a contact created in 19.4 s / 6 decisions** with two typed values (text helper 339 and 406 ms) — all on a local iPhone simulator. On a **cloud Android phone**: Airplane mode on in 13.0 s / 2 decisions (verified by the tree reading "Airplane mode is on") and the **same contact goal in 54.8 s / 6 decisions** (OPEN_APP Contacts → Create contact → two TYPEs → Save), found in the list afterwards. Cloud Android is ~10 s per step against ~3 s on the local simulator; the decisions are the same. Jev latency was 260–550 ms per decision, with two outliers at 1.1–1.4 s on the busiest screens. Full records, and the five discarded attempts with what each one changed, are in [performance.md](docs/performance.md) and [measurement.json](docs/measurement.json).
 
-That is three goals in two first-party apps. It is not a general phone-agent evaluation. The same policy, run inside phone-use's harness on the [iOSWorld](https://github.com/ljang0/iOSWorld) single-app set on cloud iPhones (2026-09-23, Jev alone, no LLM): of 15 graded tasks, **1 full pass and 52 of 101 rubric points (51%)**, at a median 35 s of agent time per task; 11 further tasks were lost to cloud infrastructure (the runner's accessibility capture timing out on heavy screens) and one timed out. Most iOSWorld tasks also ask the agent to *report* something, and a System One model has no reply channel — those rubric items are always lost. Pair it with an LLM for those; the loop stops with a reason when it cannot proceed.
+That is four goals in first-party apps on two platforms. It is not a general phone-agent evaluation. The same policy, run inside phone-use's harness on the [iOSWorld](https://github.com/ljang0/iOSWorld) single-app set on cloud iPhones (2026-09-23, Jev alone, no LLM): of 15 graded tasks, **1 full pass and 52 of 101 rubric points (51%)**, at a median 35 s of agent time per task; 11 further tasks were lost to cloud infrastructure (the runner's accessibility capture timing out on heavy screens) and one timed out. Most iOSWorld tasks also ask the agent to *report* something, and a System One model has no reply channel — those rubric items are always lost. Pair it with an LLM for those; the loop stops with a reason when it cannot proceed.
 
 Known limits: unlabeled icons, custom controls, canvas and in-app web content leave nothing to offer; permission prompts and system alerts are outside the policy; there is no `HOME` (the local simulator backend's home press is a no-op, so `OPEN_APP` switches apps instead); a valid action can still be the wrong one. `DONE` is accepted only with the independent check, and the examples still read the device afterwards.
 

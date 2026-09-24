@@ -1,6 +1,6 @@
 {
   "date": "2026-09-23",
-  "scope": "Three goals in two first-party apps on one local iOS Simulator (iPhone 17 Pro, iOS 26). Not a general phone-agent evaluation.",
+  "scope": "Three goals on one local iOS Simulator (iPhone 17 Pro, iOS 26) and two on a phone-use cloud Android phone. Not a general phone-agent evaluation.",
   "timing": "From the first observation through the final DONE, including Jev requests, text-helper calls, device verbs, re-observations and (for the About run) a screenshot per step. Excludes simulator boot and the examples' own setup/verification walks.",
   "jev": "typesafe-ai/jev via the Vercel AI Gateway (free tier)",
   "text_model": "meta/llama-4-scout via the Vercel AI Gateway (free tier)",
@@ -14,11 +14,16 @@
       "verified": true,
       "elapsed_ms": 11191,
       "decisions": 4,
-      "request_latencies_ms": [515, 372, 385, 313],
+      "request_latencies_ms": [
+        515,
+        372,
+        385,
+        313
+      ],
       "steps": [
-        "TAP \"Accessibility\" → screen changed",
-        "TAP \"Display & Text Size\" → screen changed",
-        "TOGGLE \"Bold Text\" → 0 → 1",
+        "TAP \"Accessibility\" \u2192 screen changed",
+        "TAP \"Display & Text Size\" \u2192 screen changed",
+        "TOGGLE \"Bold Text\" \u2192 0 \u2192 1",
         "DONE (independent check 0.87)"
       ],
       "log": "docs/runs/bold-text-local-2.log"
@@ -31,12 +36,18 @@
       "verified": true,
       "elapsed_ms": 14900,
       "decisions": 5,
-      "request_latencies_ms": [393, 264, 263, 263, 1210],
+      "request_latencies_ms": [
+        393,
+        264,
+        263,
+        263,
+        1210
+      ],
       "steps": [
-        "BACK → screen changed",
-        "BACK → screen changed",
-        "TAP \"General\" → screen changed",
-        "TAP \"About\" → screen changed",
+        "BACK \u2192 screen changed",
+        "BACK \u2192 screen changed",
+        "TAP \"General\" \u2192 screen changed",
+        "TAP \"About\" \u2192 screen changed",
         "DONE (independent check 0.92)"
       ],
       "log": "docs/runs/about-local.log",
@@ -50,35 +61,104 @@
       "verified": true,
       "elapsed_ms": 19385,
       "decisions": 6,
-      "request_latencies_ms": [349, 439, 1375, 411, 1113, 374],
-      "text_latencies_ms": [339, 406],
+      "request_latencies_ms": [
+        349,
+        439,
+        1375,
+        411,
+        1113,
+        374
+      ],
+      "text_latencies_ms": [
+        339,
+        406
+      ],
       "steps": [
-        "TAP \"Add\" → screen changed",
-        "TYPE \"First name\" ← \"Ada\" → screen changed",
-        "TYPE \"Last name\" ← \"LovelaceCQDL\" → screen changed",
-        "DONE → vetoed, independent check 0.07 (the form was not saved yet)",
-        "TAP \"Done\" → screen changed",
+        "TAP \"Add\" \u2192 screen changed",
+        "TYPE \"First name\" \u2190 \"Ada\" \u2192 screen changed",
+        "TYPE \"Last name\" \u2190 \"LovelaceCQDL\" \u2192 screen changed",
+        "DONE \u2192 vetoed, independent check 0.07 (the form was not saved yet)",
+        "TAP \"Done\" \u2192 screen changed",
         "DONE (independent check 0.68)"
       ],
       "repeat": "an earlier identical run (docs/runs/new-contact-local-5.log): 17591 ms, 6 decisions, verified",
       "log": "docs/runs/new-contact-local-6.log"
+    },
+    {
+      "goal": "In Settings, open Network & internet and turn on Airplane mode",
+      "device": "cloud Android phone",
+      "start": "already on Network & internet (left by a manual check)",
+      "verified_by": "the accessibility tree reads \"Airplane mode is on\" afterwards",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 13000,
+      "decisions": 2,
+      "request_latencies_ms": [
+        417,
+        501
+      ],
+      "steps": [
+        "TAP \"Airplane mode\" \u2192 no visible change (the signature ignores values)",
+        "DONE (independent check 0.75)"
+      ],
+      "log": "docs/runs/airplane-android-cloud-1.log"
+    },
+    {
+      "goal": "Create a new contact whose first name is Ada and last name is LovelaceAND2, and save it.",
+      "device": "cloud Android phone",
+      "start": "launcher; Contacts past its first-run sign-in wall",
+      "verified_by": "\"Ada LovelaceAND2\" present in the Contacts list on relaunch",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 54800,
+      "decisions": 6,
+      "request_latencies_ms": [
+        460,
+        257,
+        396,
+        498,
+        411,
+        2330
+      ],
+      "text_latencies_ms": [
+        1129,
+        479
+      ],
+      "steps": [
+        "OPEN_APP \"Contacts\" \u2192 screen changed",
+        "TAP \"Create contact\" \u2192 screen changed",
+        "TYPE \"First name\" \u2190 \"Ada\" \u2192 screen changed",
+        "TYPE \"Last name\" \u2190 \"LovelaceAND2\" \u2192 no visible change",
+        "TAP \"Save\" \u2192 screen changed",
+        "DONE (independent check 0.69)"
+      ],
+      "log": "docs/runs/contact-android-cloud-2.log"
     }
   ],
   "retained_failures": [
     {
       "goal": "Bold Text, first attempt",
-      "note": "Reported done in 2 decisions and the switch read back on — but the run had started ON the target screen: goHome() is a no-op on the local simulator backend (confirmed with a probe: Settings still frontmost 2.8 s later). The example now relaunches Settings to its root; HOME was removed from the action space.",
+      "note": "Reported done in 2 decisions and the switch read back on \u2014 but the run had started ON the target screen: goHome() is a no-op on the local simulator backend (confirmed with a probe: Settings still frontmost 2.8 s later). The example now relaunches Settings to its root; HOME was removed from the action space.",
       "log": "docs/runs/bold-text-local-1.log"
     },
     {
       "goal": "Create a contact, first attempts",
       "note": "(1) 25 decisions of OPEN_APP on an app that failed to launch: the SDK lists third-party apps as \"Name (bundle)\" and Apple's own apps not at all, and nothing stopped a repeating failure. Fixed by parsing names, adding the built-in Apple apps, and a stop after the same action fails twice. (2) BLOCKED at 0.51 vs OPEN_APP 0.30 while the app head had Contacts at 1.00: the operation question could not see which apps existed. The app names are now part of the shared state. (3) A run that started on the previous run's contact card EDITED that contact's last name and passed a naive unique-name check. The example now starts on the list and the failure is kept as a warning about verification design.",
-      "logs": ["docs/runs/contact-local-1.log", "docs/runs/contact-local-2.log", "docs/runs/new-contact-local-1.log"]
+      "logs": [
+        "docs/runs/contact-local-1.log",
+        "docs/runs/contact-local-2.log",
+        "docs/runs/new-contact-local-1.log"
+      ]
     },
     {
       "goal": "Bold Text on a phone-use cloud phone",
       "note": "The first RPC timed out (daemon under load from a concurrent benchmark). Cloud calls now go through resilient(): re-open on SESSION_NOT_FOUND, one retry for read-only calls, never for mutations. No cloud timing is claimed.",
       "log": "docs/runs/bold-text-cloud-1.log"
+    },
+    {
+      "goal": "Android, first contact attempt",
+      "note": "Immediate HTTP 503 from the gateway: the Android app list (223 packages) had gone into the request whole, 24 KB. looksLikeAndroid had rejected the listing because 'android' has no dot. Fixed; the tiny and head-less requests succeeded throughout, so it was size, not the service.",
+      "log": "docs/runs/contact-android-cloud-1.log"
     }
   ]
 }
