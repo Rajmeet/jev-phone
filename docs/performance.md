@@ -14,6 +14,13 @@ Local iPhone 17 Pro simulator:
 | Open General, then About | Display & Text Size (left by the previous run) | 5 | 393 · 264 · 263 · 263 · 1210 | **14.9 s** | final screenshot shows About |
 | Create contact Ada Lovelace‹unique›, save | Contacts list, name confirmed absent | 6 | 349 · 439 · 1375 · 411 · 1113 · 374 | **19.4 s** | found by search after a relaunch |
 
+Local Android emulator (`sdk_gphone64_arm64`, `--device android` over adb, 2026-09-24), verified with adb itself:
+
+| Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
+| --- | --- | --- | --- | --- | --- |
+| Turn on Airplane mode | Settings root | 4 | 645 · 413 · 321 · 621 | **29.2 s** | `settings get global airplane_mode_on`: 0 → 1 |
+| Create contact Ada Lovelace‹unique›, save | launcher | 6 | 347 · 1134 · 385 · 504 · 304 · 303 | **51.5 s** | `content query` on the contacts provider returns the row |
+
 Cloud Android phone (phone-use, Pixel-class emulator, 2026-09-24), same policy, `--device cloud`:
 
 | Goal | Start | Decisions | Jev latency (ms) | Total | Verified |

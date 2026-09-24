@@ -1,6 +1,6 @@
 {
   "date": "2026-09-23",
-  "scope": "Three goals on one local iOS Simulator (iPhone 17 Pro, iOS 26) and two on a phone-use cloud Android phone. Not a general phone-agent evaluation.",
+  "scope": "Three goals on one local iOS Simulator (iPhone 17 Pro, iOS 26), two on a local Android emulator over adb, and two on a phone-use cloud Android phone. Not a general phone-agent evaluation.",
   "timing": "From the first observation through the final DONE, including Jev requests, text-helper calls, device verbs, re-observations and (for the About run) a screenshot per step. Excludes simulator boot and the examples' own setup/verification walks.",
   "jev": "typesafe-ai/jev via the Vercel AI Gateway (free tier)",
   "text_model": "meta/llama-4-scout via the Vercel AI Gateway (free tier)",
@@ -133,6 +133,60 @@
         "DONE (independent check 0.69)"
       ],
       "log": "docs/runs/contact-android-cloud-2.log"
+    },
+    {
+      "goal": "In Settings, open Network & internet and turn on Airplane mode",
+      "device": "local Android emulator (sdk_gphone64_arm64, adb)",
+      "start": "Settings root",
+      "verified_by": "adb shell settings get global airplane_mode_on: 0 before, 1 after",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 29200,
+      "decisions": 4,
+      "request_latencies_ms": [
+        645,
+        413,
+        321,
+        621
+      ],
+      "steps": [
+        "SCROLL_UP \u2192 screen changed",
+        "TAP \"Network & internet\" \u2192 screen changed",
+        "TAP \"Airplane mode\" \u2192 no visible change",
+        "DONE (independent check 0.84)"
+      ],
+      "log": "docs/runs/airplane-android-local-1.log"
+    },
+    {
+      "goal": "Create a new contact whose first name is Ada and last name is LovelaceLCL1, and save it.",
+      "device": "local Android emulator (sdk_gphone64_arm64, adb)",
+      "start": "launcher",
+      "verified_by": "adb shell content query --uri content://com.android.contacts/contacts returns display_name=Ada LovelaceLCL1",
+      "status": "done",
+      "verified": true,
+      "elapsed_ms": 51500,
+      "decisions": 6,
+      "request_latencies_ms": [
+        347,
+        1134,
+        385,
+        504,
+        304,
+        303
+      ],
+      "text_latencies_ms": [
+        814,
+        437
+      ],
+      "steps": [
+        "OPEN_APP \"Contacts\" \u2192 screen changed",
+        "TAP \"Create contact\" \u2192 screen changed",
+        "TYPE \"First name\" \u2190 \"Ada\" \u2192 screen changed",
+        "TYPE \"Last name\" \u2190 \"LovelaceLCL1\" \u2192 no visible change",
+        "TAP \"Save\" \u2192 screen changed",
+        "DONE (independent check 0.77)"
+      ],
+      "log": "docs/runs/contact-android-local-1.log"
     }
   ],
   "retained_failures": [
