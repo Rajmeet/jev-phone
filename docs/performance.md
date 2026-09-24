@@ -1,80 +1,63 @@
 # Measurements
 
-Everything here was recorded on 2026-09-23 on one local iOS Simulator (iPhone 17 Pro, iOS 26) on an Apple-silicon Mac, with Jev served as `typesafe-ai/jev` and the text helper as `meta/llama-4-scout`, both through the Vercel AI Gateway on a free-tier key. Raw records: [measurement.json](measurement.json); run logs: [runs/](runs/).
+Recorded 2026-09-23/24 on one Mac: a local iPhone 17 Pro simulator (iOS 26), a local Android emulator (`sdk_gphone64_arm64`) over adb, and phone-use cloud phones. Jev is `typesafe-ai/jev` and the text helper is `meta/llama-4-scout`, both through the Vercel AI Gateway on a free-tier key. Raw records are in [measurement.json](measurement.json); each run's console output is in [runs/](runs/).
 
-Timing is from the first observation through the final `DONE`, including every Jev request, text-helper call, device verb, re-observation and (for the About run) a screenshot per step. It excludes simulator boot and the examples' own setup and verification walks.
+Timing runs from the first tree read to the final `DONE`, including every Jev request, text-helper call, device verb and re-read, and for runs with a GIF a screenshot per step. It excludes booting the phone and the examples' own setup and verification steps.
 
-## Verified runs
+## Runs that count
 
-Current code (two tree reads per step; 2026-09-24). Local iPhone 17 Pro simulator:
+Current code. Every run was checked by reading the phone afterwards; the check is in the last column.
 
-| Goal | Decisions | Jev latency (ms) | Total | Verified |
+**iPhone simulator**
+
+| Goal | Decisions | Jev (ms) | Total | Checked by |
 | --- | --- | --- | --- | --- |
-| Maps: find Blue Bottle Coffee, open it, walking route | 5 | 527 · 999 · 1027 · 467 · 268 | **16.5 s** | tree shows route "2 min · 200 ft" to Blue Bottle Coffee |
-| Turn on Bold Text | 4 | 489 · 248 · 357 · 313 | **5.7 s** | switch read back as `1` |
-| Open General, then About | 6 | avg 765 | **11.8 s** | final screen About |
-| Create contact, save | 6 | 657 · 2522 · 637 · 514 · 285 · 305 (text 575, 841) | **17.9 s** | found by search after a relaunch |
+| Maps: find Blue Bottle Coffee, open it, walking route | 5 | 527 · 999 · 1027 · 467 · 268 | 16.5 s | route row "2 min · 200 ft" and the destination, in the tree |
+| Wikipedia: search Lisbon, open the article, save it | 8 | 312 · 269 · 1699 · 346 · 306 · 279 · 269 · 1591 | 28.4 s | Lisbon listed in the Saved tab after a relaunch |
+| Settings: turn on Bold Text | 4 | 489 · 248 · 357 · 313 | 5.7 s | switch value read back as 1 |
+| Settings: General → About | 6 | avg 765 | 11.8 s | the About screen |
+| Contacts: create Ada Lovelace‹unique›, save | 6 | 657 · 2522 · 637 · 514 · 285 · 305 | 17.9 s | found through the list's search field after a relaunch |
 
-Local Android emulator (adb):
+**Android emulator**
 
-| Goal | Decisions | Jev avg (ms) | Total | Verified |
+| Goal | Decisions | Jev avg (ms) | Total | Checked by |
 | --- | --- | --- | --- | --- |
-| Turn on Airplane mode | 4 | 354 | **15.4 s** | `airplane_mode_on` 0 → 1 |
-| Create contact, save | 7 | 332 | **29.7 s** | contacts provider returns the row |
+| Settings: turn on Airplane mode | 4 | 354 | 15.4 s | `adb shell settings get global airplane_mode_on`: 0 before, 1 after |
+| Contacts: create and save a contact | 7 | 332 | 29.7 s | `adb shell content query` on the contacts provider returns the row |
 
-Steps, Maps: `TYPE search ← "Blue Bottle Coffee"` (text helper) → `TAP` the result card → `TAP Directions` (re-decided once: the card re-rendered between deciding and acting) → `TAP 2 min, walking` → `DONE` (0.76). The simulator was given a location at the Ferry Building; a first attempt without one waited forever on a route that could never compute, which is why consecutive WAITs are now capped at three ([log](runs/maps-local-1.log)). The demo GIF is this run's frames at the recorded step timings.
+The same two Android goals also ran on a cloud Android phone (13.0 s and 54.8 s, on the older four-reads-per-step code).
 
-Logs: [directions-local-1](runs/directions-local-1.log), [bold-text-local-3](runs/bold-text-local-3.log), [about-local-2](runs/about-local-2.log), [new-contact-local-7](runs/new-contact-local-7.log), [airplane-android-local-2](runs/airplane-android-local-2.log), [contact-android-local-2](runs/contact-android-local-2.log).
+Logs: [directions](runs/directions-local-1.log), [wiki-save](runs/wiki-save-local-3.log), [bold-text](runs/bold-text-local-3.log), [about](runs/about-local-2.log), [new-contact](runs/new-contact-local-7.log), [airplane](runs/airplane-android-local-2.log), [contact-android](runs/contact-android-local-2.log).
 
-What changed: the loop used to read the accessibility tree four times per step (to build the action space, to re-find the target, inside the press, and again to record the outcome). The verb's own read now reports the outcome and the start-of-step read is skipped while the cache is fresh — two reads per step. A read is ~0.7 s on the simulator and ~2 s on Android, so this roughly halved every run below.
+## What the steps looked like
 
-### Before the capture reduction (2026-09-23), for the record
+Maps: `TYPE` "Blue Bottle Coffee" into the search field (text helper) → `TAP` the result → `TAP` Directions (the card re-rendered between deciding and acting, so it decided again) → `TAP` "2 min, walking" → `DONE` at 0.76. The simulator had been given a location at the Ferry Building.
 
-Local iPhone 17 Pro simulator:
+Wikipedia: `TAP` Search → `TYPE` "Lisbon" → `TAP` the search result → `TAP` a link in the article → back on the article card → `TAP` "Save for later" → `DONE` at 0.89. One wrong turn, recovered in two steps.
 
-| Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
-| --- | --- | --- | --- | --- | --- |
-| Turn on Bold Text (Accessibility → Display & Text Size) | Settings root, switch forced OFF | 4 | 515 · 372 · 385 · 313 | **11.2 s** | switch read back as `1` |
-| Open General, then About | Display & Text Size (left by the previous run) | 5 | 393 · 264 · 263 · 263 · 1210 | **14.9 s** | final screenshot shows About |
-| Create contact Ada Lovelace‹unique›, save | Contacts list, name confirmed absent | 6 | 349 · 439 · 1375 · 411 · 1113 · 374 | **19.4 s** | found by search after a relaunch |
+Contacts (iOS): `TAP` Add → `TYPE` first name → `TYPE` last name → `DONE`, vetoed at 0.07 because the form wasn't saved → `TAP` Done → `DONE` at 0.68. Every contact run has gone this way; the veto is doing real work.
 
-Local Android emulator (`sdk_gphone64_arm64`, `--device android` over adb, 2026-09-24), verified with adb itself:
+## Where the time goes
 
-| Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
-| --- | --- | --- | --- | --- | --- |
-| Turn on Airplane mode | Settings root | 4 | 645 · 413 · 321 · 621 | **29.2 s** | `settings get global airplane_mode_on`: 0 → 1 |
-| Create contact Ada Lovelace‹unique›, save | launcher | 6 | 347 · 1134 · 385 · 504 · 304 · 303 | **51.5 s** | `content query` on the contacts provider returns the row |
+Jev answers in 250–650 ms most of the time, with occasional slow replies up to 8 s from the free-tier gateway. The text helper takes 300–900 ms. Each step reads the accessibility tree twice, once to decide and once inside the verb that acts, and a read is about 0.7 s on the simulator and 2 s on Android. That is the bottleneck. An earlier version read the tree four times per step; cutting it to two halved most runs (Bold Text 11.2 s → 5.7 s, Android contact 51.5 s → 29.7 s).
 
-Cloud Android phone (phone-use, Pixel-class emulator, 2026-09-24), same policy, `--device cloud`:
+## Runs that were thrown out
 
-| Goal | Start | Decisions | Jev latency (ms) | Total | Verified |
-| --- | --- | --- | --- | --- | --- |
-| Turn on Airplane mode (Network & internet) | already on Network & internet | 2 | 417 · 501 | **13.0 s** | tree reads "Airplane mode is on" |
-| Create contact Ada Lovelace‹unique›, save | launcher, Contacts past its sign-in wall | 6 | 460 · 257 · 396 · 498 · 411 · 2330 | **54.8 s** | "Ada LovelaceAND2" in the Contacts list |
+Kept because each one changed the code or the method.
 
-Steps, Android contact: `OPEN_APP Contacts` → `TAP Create contact` → `TYPE First name ← "Ada"` (text helper 1129 ms) → `TYPE Last name` (479 ms) → `TAP Save` → `DONE` (0.69). The decisions match the iPhone run; the device side is ~10 s per step on the cloud emulator against ~3 s locally. Two Android-specific findings shaped the code: `pm list packages` returns 200+ packages (a 24 KB request the gateway answered with 503) so only a curated, installed-filtered list is offered; and every Android label is a `TextView`, which the iOS rule counts as an editable body, so fields are detected per platform. Logs: [airplane](runs/airplane-android-cloud-1.log), [contact](runs/contact-android-cloud-2.log).
+- **Bold Text, first attempt** ([log](runs/bold-text-local-1.log)). Done in 2 decisions and the switch read on, but the run had started on the target screen: `goHome()` does nothing on the local simulator backend. The example now relaunches Settings to its root, and `HOME` was dropped from the action space.
+- **Contacts, three attempts** ([1](runs/contact-local-1.log), [2](runs/contact-local-2.log), [3](runs/new-contact-local-1.log)). First, 25 decisions of `OPEN_APP` on an app that would not launch: the SDK lists third-party apps as "Name (bundle)" and Apple's own apps not at all, and nothing stopped a repeating failure. Second, `BLOCKED` at 0.51 against `OPEN_APP` at 0.30 while the app head had Contacts at 1.00: the operation question could not see which apps existed. Third, a run that started on the previous run's contact card edited that contact's last name and passed a naive check. All three are fixed; the third is a warning about verification that only looks for the end state.
+- **Maps, first attempt** ([log](runs/maps-local-1.log)). The simulator had no location, the route stayed on "Loading…", and Jev chose `WAIT` eleven times, correctly given the screen. Consecutive `WAIT`s are now capped at three, and the simulator gets a location.
+- **Wikipedia, four attempts** ([1](runs/wiki-local-1.log), [3](runs/wiki-local-3.log), [4](runs/wiki-local-4.log), [save-1](runs/wiki-save-local-1.log)). The article got saved every time, then the done-check sat near 0.3, the veto removed `DONE`, and Jev's next pick was the same button, which unsaved it. Two changes: the control tapped last is withheld after a veto, keyed by position because its label had changed from "Save" to "Saved"; and a second `DONE` is accepted unless the check is clearly against it. One run also died on gateway 503s, so the client now backs off up to 8 s. The Kyoto run that then passed had found the article on the Explore feed instead of searching, so the example switched to Lisbon.
+- **Reminders** ([log](runs/reminders-local-1.log)). A first-run "Continue" screen, then `BLOCKED` on an empty list. Not pursued.
+- **Android SMS** ([log](runs/sms-android-local-1.log)). Typed the recipient, then the suggestion rows in Messages carry only resource ids, no labels, and Jev had nothing to choose between. The unlabeled-controls limit.
+- **Android, first contact attempt** ([log](runs/contact-android-cloud-1.log)). An immediate 503: the whole 223-package app list had gone into the request. The app list is now curated and filtered to what is installed.
+- **Bold Text on a cloud phone** ([log](runs/bold-text-cloud-1.log)). The first call timed out under load from a concurrent benchmark. Cloud calls now go through `resilient()`.
 
-Steps, Bold Text: `TAP Accessibility` → `TAP Display & Text Size` → `TOGGLE Bold Text (0 → 1)` → `DONE` (independent check 0.87).
+## iOSWorld
 
-Steps, About: `BACK` → `BACK` → `TAP General` → `TAP About` → `DONE` (independent check 0.92). The second `BACK` was chosen at confidence 0.41 — Jev was torn between backing out and something else — and was right.
-
-Steps, contact: `TAP Add` → `TYPE First name ← "Ada"` → `TYPE Last name ← "LovelaceCQDL"` → `DONE` **vetoed** (independent check 0.07: the form was not saved) → `TAP Done` → `DONE` (independent check 0.68). The text helper took 339 ms and 406 ms for the two values. An identical run a minute earlier took 17.6 s with the same six steps.
-
-Where the time goes: roughly 0.3–0.5 s per Jev request (two outliers at 1.1–1.4 s on the busiest screens), 0.3–0.4 s per text-helper call, and 2–3 s per step on the device — press, wait for the transition, observe, re-observe before the next press. The device side dominates.
-
-The done veto is not decorative. In every contact run Jev proposed `DONE` with both names typed and the form unsaved; the independent check read the same screen and put P(done) below 0.1, `DONE` was removed from the next request's options, and Jev tapped `Done`.
-
-## Retained failures
-
-Numbers that were discarded, and why. They are kept because each one changed the code or the method:
-
-- **Bold Text, first attempt** ([log](runs/bold-text-local-1.log)): reported done in 2 decisions, and the switch read back as on — but the run had started *on* the target screen. `goHome()` is a no-op on the local simulator backend (a probe showed Settings still frontmost 2.8 s later). The example now relaunches Settings to its root screen, and `HOME` was removed from the action space: `OPEN_APP` switches apps directly, and a silent no-op is a wasted step.
-- **Create a contact, three attempts** ([1](runs/contact-local-1.log), [2](runs/contact-local-2.log), [3](runs/new-contact-local-1.log)):
-  1. 25 decisions of `OPEN_APP` on an app that failed to launch. The SDK lists third-party apps as `Name (bundle.id)` and Apple's own apps not at all, and nothing stopped a repeating failure. Fixed by parsing the names, adding the built-in Apple apps, and stopping after the same action fails twice.
-  2. `BLOCKED` at 0.51 against `OPEN_APP` at 0.30 — while the app head had Contacts at 1.00. The operation question could not see which apps existed; only the target head could. The app names are now part of the shared state, and the next run opened Contacts at 0.96.
-  3. A run that happened to start on the previous run's contact card *edited* that contact's last name and passed a naive unique-name check. Verification now confirms the name is absent first, the example starts on the list, and the failure is kept as a warning: a check that only looks for the expected end state can be satisfied by the wrong path.
-- **Bold Text on a phone-use cloud phone** ([log](runs/bold-text-cloud-1.log)): the very first RPC timed out; the cloud worker was under load from a concurrent benchmark. Cloud calls now go through `resilient()` (re-open the session on `SESSION_NOT_FOUND`, retry read-only calls once, never retry mutations). No cloud timing is claimed.
+The same policy, inside phone-use's own harness and with no LLM, ran the single-app set of [iOSWorld](https://github.com/ljang0/iOSWorld) on cloud iPhones (one fresh phone per task, Codex default-model judge): 15 tasks graded, one full pass, 52 of 101 rubric points, median 35 s of agent time per task. Eleven tasks were lost to the cloud runner timing out on heavy screens and one timed out. The graded runs ended on: a repeated tap 5, an unconfirmed `DONE` 3, the permission floor on a Send button 2, `BLOCKED` 1, the step budget 1, a rounding-tie validation 1, a daemon failure 1. After fixes prompted by those endings, the six repeated-tap tasks were re-run: 20 → 24 points, still no full pass. Most iOSWorld rubrics also require a reported answer, which this agent cannot give.
 
 ## What this does not show
 
-Three goals in two first-party apps is a smoke test, not an evaluation. Nothing here scrolls a long list, handles a picker or a permission prompt, or leaves the app it started in except by `OPEN_APP` from the list. The same policy inside phone-use's harness was run on the [iOSWorld](https://github.com/ljang0/iOSWorld) single-app set on cloud iPhones the same day (Jev alone, no LLM, one fresh phone per task, Codex default-model judge): 15 tasks graded — 1 full pass (notes-001), 52/101 rubric points (51%), median 35 s of agent time; 11 tasks excluded as infrastructure failures (the cloud runner's accessibility capture times out on LockedIn, Mail, MegaMart, DineSpot and others and stays wedged) and one timed out ungraded. How the graded runs ended: loop-breaker refusals 5, unconfirmed DONE 3, the permission floor on a "Send" button 2 (correct — Jev cannot confirm), BLOCKED 1, step budget 1, a rounding-tie validation 1 (since tolerated), daemon failure 1. Most iOSWorld rubrics also require a reported answer, which a System One model cannot produce. After the follow-up fixes those runs prompted (withholding a control after a failed tap, keying the harness's loop breaker by element rather than ref, the rounding tolerance), the six tasks that had ended at the loop breaker were re-run: 20 → 24 of 41 rubric points, still no full pass — the remaining stops are unlabeled controls, confirmations, and answers.
+Seven goals in five apps, one of them third-party, is a smoke test. Nothing here handles a date picker, a permission prompt, a long list that needs scrolling, or an app that fights the accessibility tree.

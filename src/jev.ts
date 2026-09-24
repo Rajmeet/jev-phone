@@ -39,7 +39,7 @@ export type JevClientOptions = {
   model?: string;
   /** Per-attempt timeout (default 10s). */
   timeoutMs?: number;
-  /** Retries on 408/429/5xx and network errors (default 2). */
+  /** Retries on 408/429/5xx and network errors (default 4, backing off to 8 s: the gateway's free tier throttles bursts). */
   maxRetries?: number;
   fetch?: FetchLike;
 };
@@ -93,7 +93,7 @@ export function createJevClient(opts: JevClientOptions = {}, env = process.env):
   const baseURL = (opts.baseURL ?? env[`${ep.key.replace('_API_KEY', '')}_BASE_URL`] ?? ep.base).replace(/\/+$/, '');
   const model = opts.model ?? env.JEV_MODEL ?? ep.model;
   const timeoutMs = opts.timeoutMs ?? 10_000;
-  const maxRetries = opts.maxRetries ?? 2;
+  const maxRetries = opts.maxRetries ?? 4;
   const doFetch: FetchLike = opts.fetch ?? fetch;
 
   async function ask(
@@ -124,7 +124,7 @@ export function createJevClient(opts: JevClientOptions = {}, env = process.env):
     let lastError = 'no attempt made';
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       if (callOpts.signal?.aborted) return { ok: false, reason: 'aborted', ms: elapsed() };
-      if (attempt > 0) await new Promise((r) => setTimeout(r, Math.min(500 * 2 ** (attempt - 1), 5000)));
+      if (attempt > 0) await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 8000)));
       const timeout = AbortSignal.timeout(timeoutMs);
       const signal = callOpts.signal ? AbortSignal.any([callOpts.signal, timeout]) : timeout;
       let res: Response;

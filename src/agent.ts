@@ -7,7 +7,7 @@ import type { UiElement } from '@phone-use/sdk';
 import { type App, discoverApps } from './apps.ts';
 import { createJevClient, type JevAnswer, type JevClient } from './jev.ts';
 import { buildRequest, type Decision, type Op, resolve, type Step } from './policy.ts';
-import { elementKey, type Phone, readScreen, refind, type Screen } from './screen.ts';
+import { elementKey, type Phone, positionKey, readScreen, refind, type Screen } from './screen.ts';
 import { type TextHelper, textHelper } from './text.ts';
 
 export type AgentOptions = {
@@ -108,6 +108,7 @@ export async function* run(
   // next request, so Jev must pick differently (seen live: an element the
   // device reported off-screen re-picked three times).
   const avoid = new Map<string, number>();
+  let lastEl: UiElement | undefined;
   let lastKey: string | undefined;
   let repeatRun = 0;
   let waitRun = 0;
@@ -169,13 +170,30 @@ export async function* run(
           `goal visibly satisfied on "${s.title || s.app || 'the current screen'}" (independent check ${d.goalDone.toFixed(2)})`,
         );
       }
-      // An unverified DONE is the most common false success: veto it once, then stop.
+      // An unverified DONE is the most common false success: veto it once.
+      // If Jev insists and the check is not clearly against it, accept — a
+      // saved Wikipedia article shows only as a changed button label, and
+      // the check sat at 0.3 while the run was in fact done.
       if (doneVetoed) {
-        yield { ...event, status: 'blocked', reason: 'DONE proposed twice without visible confirmation' };
+        if (d.goalDone >= 0.2) {
+          yield { ...event, status: 'done', reason: `Jev insisted; independent check ${d.goalDone.toFixed(2)}` };
+          return finish(
+            'done',
+            `DONE proposed twice, independent check ${d.goalDone.toFixed(2)} (not clearly against)`,
+          );
+        }
+        yield { ...event, status: 'blocked', reason: 'DONE proposed twice, check clearly against' };
         return finish('blocked', `DONE proposed but not visibly confirmed (P(done)=${d.goalDone.toFixed(2)})`);
       }
       doneVetoed = true;
       vetoed.add('DONE');
+      // Do not let the retry undo the last action: Jev's next pick after a
+      // veto was the same button that had just saved an article, which
+      // unsaved it. Withhold that control for a step.
+      if (lastEl) {
+        avoid.set(elementKey(lastEl), decisions + 2);
+        avoid.set(positionKey(lastEl), decisions + 2);
+      }
       history.push({ op: 'DONE', outcome: `vetoed — independent check P(done)=${d.goalDone.toFixed(2)}` });
       yield event;
       continue;
@@ -266,6 +284,7 @@ export async function* run(
     }
     const step: Step = { op: d.op, ...(label ? { target: label } : {}), ...(text ? { text } : {}), outcome };
     history.push(step);
+    if (el && (d.op === 'TAP' || d.op === 'TOGGLE')) lastEl = el;
     yield { ...event, action: step, textMs };
 
     // No harness underneath to refuse a repeat: the same action failing or

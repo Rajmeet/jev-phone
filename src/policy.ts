@@ -45,7 +45,7 @@ const TARGET_RULE = (op: Op) =>
   `Assuming the next operation is ${op}, choose its best target for the entire goal. This is speculative: another question selects the operation. Choose only an offered option.`;
 
 export const DONE_CHECK =
-  'Is the goal in `goal` already fully achieved, judged ONLY from `screen`? Every requirement must be visibly satisfied: a search must show results, not just typed text; a setting must show its new value; a created item must be visible. A success banner alone is not proof.';
+  'Is the goal in `goal` already fully achieved, judged ONLY from `screen` and `recent_actions`? Every requirement must be visibly satisfied: a search must show results, not just typed text; a setting must show its new value; a created item must be visible. A control whose label now reports the requested state ("Saved", "On", "Following") after the matching action is such evidence. A success banner alone is not proof.';
 
 const HISTORY_WINDOW = 8;
 

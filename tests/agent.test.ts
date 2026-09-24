@@ -115,7 +115,7 @@ describe('loop', () => {
       jev: scripted(
         [
           { operation: { choice: 'DONE' }, goal_done: { noul: 0.2 } },
-          { operation: { choice: 'DONE' }, goal_done: { noul: 0.3 } },
+          { operation: { choice: 'DONE' }, goal_done: { noul: 0.1 } },
         ],
         seen,
       ),

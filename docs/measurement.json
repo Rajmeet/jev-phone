@@ -32,6 +32,36 @@
       "media": "demo.gif"
     },
     {
+      "goal": "In Wikipedia, search for Lisbon, open the article about the city, and save it for later.",
+      "device": "iPhone 17 Pro simulator",
+      "status": "done",
+      "verified": true,
+      "verified_by": "Lisbon listed in the Saved tab after relaunching Wikipedia",
+      "elapsed_ms": 28444,
+      "decisions": 8,
+      "request_latencies_ms": [
+        312,
+        269,
+        1699,
+        346,
+        306,
+        279,
+        269,
+        1591
+      ],
+      "steps": [
+        "TAP \"Search\"",
+        "TYPE \"Search Wikipedia\" \u2190 \"Lisbon\"",
+        "TAP \"Search Result Lisbon\"",
+        "TAP \"Lisbon\" (a link in the article)",
+        "TAP \"Saved\" \u2192 stale, decided again",
+        "TAP \"Lisbon, Capital and largest city of Portugal\"",
+        "TAP \"Save for later\"",
+        "DONE (independent check 0.89)"
+      ],
+      "log": "docs/runs/wiki-save-local-3.log"
+    },
+    {
       "goal": "In Settings, open Accessibility, then Display & Text Size, and turn on Bold Text.",
       "device": "iPhone 17 Pro simulator",
       "status": "done",

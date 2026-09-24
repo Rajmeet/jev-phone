@@ -4,7 +4,7 @@
 
 Drive a phone with a model that never writes a word.
 
-Search Maps for a coffee shop and get walking directions. Open Contacts, create a contact, save it. Turn on Airplane mode. Each step is one call to [Jev](https://docs.typesafe.ai/concepts/system-one), TypeSafe's System One model, which looks at the screen's elements and picks what to tap. A small LLM types when something needs typing. [phone-use](https://www.npmjs.com/package/@phone-use/sdk) runs it on an iOS Simulator, an Android device, or a cloud phone.
+Search Maps for a coffee shop and get walking directions. Find an article in Wikipedia and save it for later. Open Contacts, create a contact, save it. Turn on Airplane mode. Each step is one call to [Jev](https://docs.typesafe.ai/concepts/system-one), TypeSafe's System One model, which looks at the screen's elements and picks what to tap. A small LLM types when something needs typing. [phone-use](https://www.npmjs.com/package/@phone-use/sdk) runs it on an iOS Simulator, an Android device, or a cloud phone.
 
 <img src="demo.gif" alt="Apple Maps: search for Blue Bottle Coffee, open it, walking route" width="270" />
 
@@ -57,6 +57,8 @@ phone: iPhone 17 Pro
 
 Add `--debug` to see every probability Jev returned, `--screenshots <dir>` to save a frame per step.
 
+Four scripts run a fixed goal and then check the phone themselves: `examples/directions.ts` (the demo above; give the simulator a location first with `xcrun simctl location <udid> set 37.7955,-122.3937`), `examples/wiki-save.ts`, `examples/bold-text.ts` and `examples/new-contact.ts`.
+
 ## How it works
 
 Every step reads the accessibility tree once and turns it into a numbered menu:
@@ -85,7 +87,7 @@ screen → numbered elements → ┌ operation      ┐
 Then the pick becomes a phone-use verb. A few rules keep it honest:
 
 - The chosen element is looked up again on a fresh read before it's pressed. If it moved, it's pressed where it is now. If it's gone, Jev decides again.
-- `DONE` only counts when the separate done-check agrees. When it doesn't, `DONE` is removed from the next menu. In every contact run so far Jev said done with the form unsaved, the check said 0.07, and Jev tapped Save on the next step.
+- `DONE` only counts when the separate done-check agrees. When it doesn't, `DONE` is removed from the next menu, and so is the last thing tapped, so the retry can't undo it. In every contact run so far Jev said done with the form unsaved, the check said 0.07, and Jev tapped Save on the next step. If Jev insists a second time and the check isn't clearly against it, that counts.
 - Switches are pressed at the knob, not the middle of the row, and the value is read back.
 - Taps on Delete, Pay, Send and the like are refused unless you pass `allowDestructive`.
 - The same action failing twice ends the run. Nothing is ever retried on the device.
@@ -99,6 +101,7 @@ Every number below comes from a run whose log is in [`docs/runs/`](docs/runs), a
 | Phone | Goal | Decisions | Time |
 | --- | --- | --- | --- |
 | iOS Simulator | Maps: Blue Bottle Coffee, place card, walking route | 5 | 16.5 s |
+| iOS Simulator | Wikipedia: search Lisbon, open the article, save it | 8 | 28.4 s |
 | iOS Simulator | Settings: turn on Bold Text | 4 | 5.7 s |
 | iOS Simulator | Contacts: create and save a contact | 6 | 17.9 s |
 | Android emulator | Settings: turn on Airplane mode | 4 | 15.4 s |

@@ -108,6 +108,9 @@ function screenName(core: Phone): string {
 /** Observe the device and build the action space for this step. */
 /** role|label — how an element is remembered across observations. */
 export const elementKey = (e: UiElement) => `${e.role}|${e.label}`;
+/** role@x,y — the same control even after its label changed ("Save" → "Saved"). */
+export const positionKey = (e: UiElement) =>
+  e.rect ? `${e.role}@${Math.round(e.rect.x / 10)},${Math.round(e.rect.y / 10)}` : elementKey(e);
 
 export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<string> = new Set()): Promise<Screen> {
   // The previous verb already re-read the tree; reuse it while it is fresh.
@@ -136,7 +139,11 @@ export async function readScreen(core: Phone, apps: App[], avoid: ReadonlySet<st
     // launch: offering both split the probability between two right answers.
     controls: visible
       .filter(
-        (e) => e.role !== 'Switch' && !(launcher && appNames.has(e.label.toLowerCase())) && !avoid.has(elementKey(e)),
+        (e) =>
+          e.role !== 'Switch' &&
+          !(launcher && appNames.has(e.label.toLowerCase())) &&
+          !avoid.has(elementKey(e)) &&
+          !avoid.has(positionKey(e)),
       )
       .slice(0, MAX_CONTROLS),
     switches: visible.filter((e) => e.role === 'Switch').slice(0, MAX_CONTROLS),
