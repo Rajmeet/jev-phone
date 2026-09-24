@@ -109,7 +109,7 @@ Every number below comes from a run whose log is in [`docs/runs/`](docs/runs), a
 
 Jev takes 250–650 ms per decision. The rest is the phone: each step reads the accessibility tree twice, about 0.7 s a read on the simulator and 2 s on Android. Android's figures are slower for that reason alone; the decisions are the same.
 
-On the [iOSWorld](https://github.com/ljang0/iOSWorld) benchmark, run through phone-use's harness with no LLM: 15 tasks graded, one full pass, 51% of rubric points. Most of those rubrics ask the agent to report something, and this agent can't.
+On the [iOSWorld](https://github.com/ljang0/iOSWorld) benchmark, run through phone-use's harness with no LLM: 15 of the 27 single-app tasks were graded (the rest were lost to cloud infrastructure), one full pass, 52 of 101 rubric points. Not a full evaluation. Many of the rubric items ask the agent to report a value, which this agent can't do.
 
 ## What it can't do
 
