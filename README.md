@@ -35,7 +35,7 @@ bun examples/run.ts "Open Settings and go to General, then About"
 bun examples/run.ts --device android "In Settings, turn on Airplane mode"
 ```
 
-**Cloud phone**, iOS or Android, no Mac needed:
+**No Mac or emulator?** Use a cloud phone from [phone-use](https://app.phoneuse.dev). `phone-use login` opens the console in your browser to create an account or sign in, then:
 
 ```bash
 npm i -g phone-use && phone-use login
@@ -161,7 +161,7 @@ One runtime dependency. `bun run check` runs the linter, the type checker, and t
 ## Related
 
 - [jev-ultrafast](https://github.com/browser-use/jev-ultrafast), the browser agent this design follows.
-- [phone-use](https://www.npmjs.com/package/phone-use), the CLI, SDK, and cloud phones underneath. [app.phoneuse.dev](https://app.phoneuse.dev)
+- [phone-use](https://app.phoneuse.dev), the SDK underneath, its CLI, and the cloud phones. [npm](https://www.npmjs.com/package/phone-use)
 - [mobile-jev](https://github.com/droidrun/mobile-jev), droidrun's Jev agent for Android.
 - [TypeSafe: System One models](https://docs.typesafe.ai/concepts/system-one)
 
