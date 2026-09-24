@@ -1,158 +1,165 @@
 # jev-phone
 
-[![CI](https://github.com/Rajmeet/jev-phone/actions/workflows/ci.yml/badge.svg)](https://github.com/Rajmeet/jev-phone/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Bun](https://img.shields.io/badge/runtime-Bun-black.svg)](https://bun.sh) [![iOS · Android](https://img.shields.io/badge/phones-iOS%20%C2%B7%20Android-green.svg)](#try-it)
+[![CI](https://github.com/Rajmeet/jev-phone/actions/workflows/ci.yml/badge.svg)](https://github.com/Rajmeet/jev-phone/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Bun](https://img.shields.io/badge/runtime-Bun-black.svg)](https://bun.sh) [![iOS · Android](https://img.shields.io/badge/phones-iOS%20%C2%B7%20Android-green.svg)](#quickstart)
 
-**A phone agent with a dynamic, indexed action space.**
+Drive a phone with a model that never writes a word.
 
-Give it one goal. [TypeSafe's Jev](https://docs.typesafe.ai/concepts/system-one) picks an operation and a target from what the screen actually offers — in one request, in a few hundred milliseconds, with probabilities instead of prose. [phone-use](https://github.com/Rajmeet/phone-use) executes it on a real iOS Simulator or a cloud iPhone. A small LLM writes text only when the operation is `TYPE`.
+Search Maps for a coffee shop and get walking directions. Open Contacts, create a contact, save it. Turn on Airplane mode. Each step is one call to [Jev](https://docs.typesafe.ai/concepts/system-one), TypeSafe's System One model, which looks at the screen's elements and picks what to tap. A small LLM types when something needs typing. [phone-use](https://www.npmjs.com/package/@phone-use/sdk) runs it on an iOS Simulator, an Android device, or a cloud phone.
 
-**Blue Bottle Coffee in Apple Maps, place card, walking route: 16.5 seconds, 5 decisions.** One natural-language goal, a real place search typed by the text helper, the route verified from the accessibility tree afterwards. Decisions take ~300–500 ms; the rest is the phone.
+<img src="demo.gif" alt="Apple Maps: search for Blue Bottle Coffee, open it, walking route" width="270" />
 
-<img src="demo.gif" alt="Jev searching Apple Maps for Blue Bottle Coffee, opening the place card and getting a walking route, at recorded speed" width="270" />
+*Apple Maps, one goal: find Blue Bottle Coffee, open it, get walking directions. 16.5 s, 5 decisions, played at the recorded speed. The route on screen at the end is real.*
 
-*"In Maps, search for Blue Bottle Coffee, open the first result and get walking directions to it." Played at the recorded step timings ([log](docs/runs/directions-local-1.log)). Also verified: a contact created from scratch on iOS and Android, Settings toggles, Airplane mode on an Android emulator read back through adb.*
+Jev is in early access, but the [Vercel AI Gateway](https://vercel.com/ai-gateway) serves it today. One gateway key runs everything here.
 
-[Design](docs/design.md) · [Measurements](docs/performance.md) · [Read the loop](src/agent.ts)
+## Quickstart
 
-## The action space
-
-Every observation produces a new element table from the accessibility tree — no screenshots, no OCR:
-
-```text
-controls      [1] Cell      General
-              [2] Cell      Accessibility
-              [3] Button    Search
-switches      [1] Switch    Bold Text        value 0
-text_fields   [1] SearchField  Search
-```
-
-The operations are `TAP`, `TOGGLE`, `TYPE`, `SCROLL_UP`, `SCROLL_DOWN`, `BACK`, `OPEN_APP`, `WAIT`, `DONE` and `BLOCKED`. Only operations the screen supports are offered: no `TOGGLE` without a switch, no `TYPE` without a field, no `OPEN_APP` on the app itself.
-
-```text
-                        one Jev request
-                       ┌───────────────────────────┐
-screen → element table → operation                 │
-                       │ tap_target                │
-                       │ toggle_target             │
-                       │ type_target               │
-                       │ app_target                │
-                       │ goal_done (independent)   │
-                       └─────────────┬─────────────┘
-                              use the matching head
-                                     │
-                      TAP [2] ───────┤──→ phone
-                   TOGGLE [1] ───────┘
-                     TYPE [1]
-                            ↓
-                  small LLM → text → phone
-```
-
-Target questions are speculative. If the operation is `TAP`, only `tap_target` can execute. Two decisions, **one network round trip**. Each head contains only compatible elements — switches only under `TOGGLE`, fields only under `TYPE` — so Jev cannot type into a button or toggle a row. A `goal_done` question rides in the same request and must agree before a `DONE` is accepted.
-
-There are no app-specific scripts and no prepared field values in the policy. The examples supply a goal and verify the outcome independently.
-
-## Try it
-
-**Requirements:** [Bun](https://bun.sh); a phone — a booted iOS Simulator (macOS + Xcode), an Android emulator or device visible to `adb`, or a phone-use cloud phone (iOS or Android, no Mac needed); and a Jev key. Typing also needs a text-model key — the gateway key covers both.
+You need [Bun](https://bun.sh), a phone, and a gateway key.
 
 ```bash
 git clone https://github.com/Rajmeet/jev-phone.git
 cd jev-phone
 bun install
-cp .env.example .env     # add TYPESAFE_API_KEY or AI_GATEWAY_API_KEY
+cp .env.example .env     # AI_GATEWAY_API_KEY=...
+```
+
+**iOS Simulator** (macOS, Xcode, a booted simulator):
+
+```bash
 bun examples/run.ts "Open Settings and go to General, then About"
 ```
 
-Each decision prints as it happens:
+**Android** (any emulator or device `adb` can see):
+
+```bash
+bun examples/run.ts --device android "In Settings, turn on Airplane mode"
+```
+
+**Cloud phone**, iOS or Android, no Mac needed:
+
+```bash
+npm i -g phone-use && phone-use login
+phone-use create ios            # or: phone-use create android
+eval "$(phone-use env <id>)"
+bun examples/run.ts --device cloud "Create a contact named Ada Lovelace and save it"
+```
+
+You get one line per decision:
 
 ```text
 phone: iPhone 17 Pro
- 1.   1.7s  BACK  conf 0.92  done 0.01  393ms  → went back — screen changed
- 2.   4.6s  BACK  conf 0.41  done 0.01  264ms  → went back — screen changed
- 3.   7.4s  TAP "General"  conf 1.00  done 0.02  263ms  → tapped "General" — screen changed
- 4.  10.7s  TAP "About"  conf 0.96  done 0.16  263ms  → tapped "About" — screen changed
- 5.  14.9s  DONE  conf 0.99  done 0.92  1210ms  [done: independent check 0.92]
+ 1.   2.5s  TYPE "Apple Maps" ← "Blue Bottle Coffee"   conf 0.95   527ms  → screen changed
+ 2.   8.9s  TAP "Blue Bottle Coffee, 200 ft · 1 Ferry Building"  conf 0.97   999ms  → screen changed
+ 3.  12.6s  TAP "Directions"                            conf 0.83  1027ms  → stale, decided again
+ 4.  13.9s  TAP "2 min, walking"                        conf 0.87   467ms  → screen changed
+ 5.  16.5s  DONE                                        done 0.76   268ms
 ```
 
-`bun examples/directions.ts`, `bun examples/bold-text.ts` and `bun examples/new-contact.ts` are the verified examples. The first is the demo above: it relaunches Maps, runs the goal, then reads the route row and the destination back from the accessibility tree (give the simulator a location first: `xcrun simctl location <udid> set 37.7955,-122.3937`). The first forces Bold Text off, runs the goal, then walks to the switch with plain verbs and reads it. The second confirms a unique name is absent, runs the goal, relaunches Contacts and finds the contact through search. A `DONE` from the model is not proof; the read-back is.
+Add `--debug` to see every probability Jev returned, `--screenshots <dir>` to save a frame per step.
 
-The contact run is also where the done veto earns its keep: with both names typed and the form unsaved, Jev proposes `DONE`; the independent check, reading the same screen, puts P(done) below 0.1; `DONE` is removed from the next request's options and Jev taps `Done`.
+## How it works
+
+Every step reads the accessibility tree once and turns it into a numbered menu:
 
 ```text
- 1. TAP "Add"                          conf 0.99  → screen changed
- 2. TYPE "First name" ← "Ada"          conf 0.88  +text 339ms
- 3. TYPE "Last name" ← "LovelaceCQDL"  conf 0.85  +text 406ms
- 4. DONE                               done 0.07  → vetoed
- 5. TAP "Done"                         conf 0.96  → screen changed
- 6. DONE                               done 0.68  [done]
+controls      [1] Cell   General          [2] Cell  Accessibility   [3] Button  Search
+switches      [1] Switch Bold Text  value 0
+text_fields   [1] SearchField  Search
+apps          Contacts, Calendar, Maps, ...
 ```
 
-Jev is reachable two ways: TypeSafe's API (`TYPESAFE_API_KEY`) or the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`AI_GATEWAY_API_KEY`, model `typesafe-ai/jev`). The text helper for `TYPE` speaks the OpenAI chat-completions dialect and defaults to the gateway with Llama 4 Scout, reusing the same key; point `TEXT_MODEL_BASE_URL` / `TEXT_MODEL` at anything compatible.
+That menu goes to Jev in one request with several questions: which operation (`TAP`, `TOGGLE`, `TYPE`, `SCROLL`, `BACK`, `OPEN_APP`, `WAIT`, `DONE`, `BLOCKED`), which target *if* it's a tap, which *if* it's a toggle, which *if* it's a type, and, separately, whether the goal already looks done. Only operations the screen supports are offered, and each target list only holds elements that fit the operation. Jev answers with a label and a probability distribution for every question, in a few hundred milliseconds.
 
-For Android: `--device android` (the adb device/emulator on this machine). For a cloud phone, iOS or Android: `phone-use create ios` / `phone-use create android`, then `eval "$(phone-use env <id>)"` and `--device cloud`. Cloud phones are early: they expire after 15 minutes and heavy screens can wedge the runner; use a local simulator for the demo.
+```text
+screen → numbered elements → ┌ operation      ┐
+                             │ tap_target     │  one request
+                             │ toggle_target  │
+                             │ type_target    │
+                             │ goal_done      │
+                             └────────────────┘
+                                  ↓ the head that matches the operation
+                             TAP [2] → phone
+                             TYPE [1] → small LLM writes the text → phone
+```
 
-## Use the library
+Then the pick becomes a phone-use verb. A few rules keep it honest:
 
-It is not on npm; add it from git (`bun add github:Rajmeet/jev-phone`) or copy `src/`.
+- The chosen element is looked up again on a fresh read before it's pressed. If it moved, it's pressed where it is now. If it's gone, Jev decides again.
+- `DONE` only counts when the separate done-check agrees. When it doesn't, `DONE` is removed from the next menu. In every contact run so far Jev said done with the form unsaved, the check said 0.07, and Jev tapped Save on the next step.
+- Switches are pressed at the knob, not the middle of the row, and the value is read back.
+- Taps on Delete, Pay, Send and the like are refused unless you pass `allowDestructive`.
+- The same action failing twice ends the run. Nothing is ever retried on the device.
+
+The model never produces a selector, a coordinate, or code. The text helper must return exactly `{"text": "..."}` or `{"text": null}`; anything else types nothing.
+
+## Results
+
+Every number below comes from a run whose log is in [`docs/runs/`](docs/runs), and every run was checked by reading the phone afterwards: a switch value, a database row, a route on screen. Details, and the runs that were thrown out with the reasons, are in [`docs/performance.md`](docs/performance.md).
+
+| Phone | Goal | Decisions | Time |
+| --- | --- | --- | --- |
+| iOS Simulator | Maps: Blue Bottle Coffee, place card, walking route | 5 | 16.5 s |
+| iOS Simulator | Settings: turn on Bold Text | 4 | 5.7 s |
+| iOS Simulator | Contacts: create and save a contact | 6 | 17.9 s |
+| Android emulator | Settings: turn on Airplane mode | 4 | 15.4 s |
+| Android emulator | Contacts: create and save a contact | 7 | 29.7 s |
+
+Jev takes 250–650 ms per decision. The rest is the phone: each step reads the accessibility tree twice, about 0.7 s a read on the simulator and 2 s on Android. Android's figures are slower for that reason alone; the decisions are the same.
+
+On the [iOSWorld](https://github.com/ljang0/iOSWorld) benchmark, run through phone-use's harness with no LLM: 15 tasks graded, one full pass, 51% of rubric points. Most of those rubrics ask the agent to report something, and this agent can't.
+
+## What it can't do
+
+- **Answer questions.** There is no text output. "Tell me the iOS version" can be navigated to, not answered.
+- **Confirm.** A `Send` or `Pay` needs a yes from someone. That's the harness's job, or an LLM's.
+- **Tell unlabeled things apart.** A spreadsheet cell with no label is just "cell" to Jev.
+- **Handle prompts.** Permission dialogs and alerts are outside the action space. Clear them first.
+- **Go home.** `HOME` isn't offered; `OPEN_APP` switches apps directly, and the simulator's home press was a no-op anyway.
+
+If you need those, pair it with an LLM. `run()` stops with a reason, and the trail of what it already did, whenever it can't continue.
+
+## Use it as a library
 
 ```ts
 import { connectDevice, run } from 'jev-phone';
 
-const phone = await connectDevice('connect'); // booted simulator; 'launch' | 'android' | 'cloud' | '<udid>'
+const phone = await connectDevice('connect'); // 'launch' | 'android' | 'cloud' | '<udid>'
 for await (const step of run(phone.core, 'Turn on Bold Text in Settings')) {
   console.log(step.decision.op, step.decision.element?.label, step.jevMs);
 }
 await phone.close();
 ```
 
-`run()` is an async generator: one event per decision, the final result as its return value. `runGoal()` runs to completion. Options: `maxSteps` (25), `doneThreshold` (0.6), `minConfidence` (0 — act on the argmax), `text` (your own helper, or `null` to disable typing), `allowDestructive`, `screenshotDir`.
+`run()` is an async generator: an event per decision, the result as its return value. `runGoal()` runs to completion. Options: `maxSteps` (25), `doneThreshold` (0.6), `minConfidence` (0), `text` (your own helper, or `null` to disable typing), `allowDestructive`, `screenshotDir`. Not on npm yet; `bun add github:Rajmeet/jev-phone` or copy `src/`.
 
-## Why it moves
+## Configuration
 
-- **One request per decision.** Operation and target heads share the same observed state; the done-check rides along.
-- **Jev never generates.** Choices come back as label + probability + confidence in ~250–500 ms. The only generation is the text helper, called only for `TYPE`.
-- **One observation per step.** The accessibility tree, read once, gives roles, labels, values and frames. Screenshots are optional and the model never sees them.
-- **Validate the answer.** Probability keys must equal the offered labels, sum to 1, and the pick must be the argmax. Anything else is a failure, never repaired.
-- **Re-find before acting.** The chosen element is re-located on a fresh observation by role, label and value. If it moved, it is pressed where it is now; if it is gone, the agent decides again.
-- **Switches at the knob.** An iOS switch's frame spans the row; the centre is the label. `TOGGLE` presses 24 pt from the right edge and reads the value back.
-- **Never retry a mutation.** A timed-out press may already have landed.
-
-Every executed target is an observed element. Model output never becomes a selector, a coordinate, a shell command or code. The text helper's output must parse as exactly `{"text": string | null}` before anything is typed.
-
-## Small enough to read
-
-| File | Job |
+| Variable | Purpose |
 | --- | --- |
-| [agent.ts](src/agent.ts) | The loop, the done veto, the text-helper handoff, execution |
-| [policy.ts](src/policy.ts) | The one request: operations, target heads, the done check |
-| [screen.ts](src/screen.ts) | Observation → indexed action space; re-finding an element |
-| [jev.ts](src/jev.ts) | Plain-fetch Jev client, two transports, strict validation |
-| [text.ts](src/text.ts) | The text helper and its contract |
-| [apps.ts](src/apps.ts) | What OPEN_APP may target: installed apps plus the built-in Apple ones |
-| [device.ts](src/device.ts) | Local simulator or cloud phone; cloud session recovery |
+| `AI_GATEWAY_API_KEY` | Jev and the text helper through the Vercel AI Gateway |
+| `TYPESAFE_API_KEY` | Jev through TypeSafe's API instead |
+| `TEXT_MODEL`, `TEXT_MODEL_BASE_URL`, `TEXT_MODEL_API_KEY` | Any OpenAI-compatible text model. Default `meta/llama-4-scout` on the gateway |
+| `JEV_PHONE_DEVICE` | Default device: `connect`, `launch`, `android`, `cloud`, or a udid |
 
-About 1,100 lines of TypeScript including comments, one runtime dependency (`@phone-use/sdk`).
+## Reading the code
 
-## Evidence and limits
+| File | Lines | What it does |
+| --- | --- | --- |
+| [`src/agent.ts`](src/agent.ts) | 355 | The loop, the done veto, the text handoff, execution |
+| [`src/jev.ts`](src/jev.ts) | 244 | Jev client, two transports, strict validation of every answer |
+| [`src/screen.ts`](src/screen.ts) | 172 | Accessibility tree → numbered menu; re-finding an element |
+| [`src/policy.ts`](src/policy.ts) | 153 | Builds the one request and reads the answer |
+| [`src/device.ts`](src/device.ts) | 82 | Simulator, adb, or cloud phone |
+| [`src/apps.ts`](src/apps.ts) | 80 | What `OPEN_APP` may open, on iOS and Android |
+| [`src/text.ts`](src/text.ts) | 78 | The text helper and its contract |
 
-Verified runs across iOS and Android (current code; earlier, slower runs of the same goals are kept in the docs): **Maps: Blue Bottle Coffee found, place card opened, walking route computed in 16.5 s / 5 decisions**, **Bold Text on in 5.7 s / 4 decisions** from the Settings root, **General → About in 11.8 s / 6 decisions** from two screens deep in another section, and **a contact created in 17.9 s / 6 decisions** with two typed values — all on a local iPhone simulator. On **Android** (a local emulator over adb): Airplane mode on in 15.4 s / 4 decisions (`adb shell settings get global airplane_mode_on` read 0 before and 1 after) and the **same contact goal in 29.7 s / 7 decisions** (OPEN_APP Contacts → Create contact → two TYPEs → Save), the row present in the contacts database afterwards. A cloud Android phone ran both as well (13.0 s and 54.8 s, before the capture reduction). Android costs ~4 s per device step against ~1.5 s on the iOS simulator; the decisions are the same. Jev latency was mostly 250–650 ms per decision, with occasional outliers to 2.5 s. Each step reads the accessibility tree twice (once before acting, once by the verb itself); that read is ~0.7 s on the simulator and ~2 s on Android, and it is the bottleneck, not the model. Full records, and the five discarded attempts with what each one changed, are in [performance.md](docs/performance.md) and [measurement.json](docs/measurement.json).
-
-That is five goals in first-party apps on two platforms. It is not a general phone-agent evaluation. The same policy, run inside phone-use's harness on the [iOSWorld](https://github.com/ljang0/iOSWorld) single-app set on cloud iPhones (2026-09-23, Jev alone, no LLM): of 15 graded tasks, **1 full pass and 52 of 101 rubric points (51%)**, at a median 35 s of agent time per task; 11 further tasks were lost to cloud infrastructure (the runner's accessibility capture timing out on heavy screens) and one timed out. Most iOSWorld tasks also ask the agent to *report* something, and a System One model has no reply channel — those rubric items are always lost. Pair it with an LLM for those; the loop stops with a reason when it cannot proceed.
-
-Known limits: unlabeled icons, custom controls, canvas and in-app web content leave nothing to offer; permission prompts and system alerts are outside the policy; there is no `HOME` (the local simulator backend's home press is a no-op, so `OPEN_APP` switches apps instead); a valid action can still be the wrong one. `DONE` is accepted only with the independent check, and the examples still read the device afterwards.
-
-## Development
-
-```bash
-bun run check     # biome + tsc + tests (offline: a scripted Jev and phone-use's FakeBackend)
-```
-
-Tests never call paid APIs. Live examples do; their logs are kept under `docs/runs/`.
+One runtime dependency. `bun run check` runs the linter, the type checker, and the tests; the tests use a fake phone and a scripted Jev, so they don't call anything.
 
 ## Related
 
-- [jev-ultrafast](https://github.com/browser-use/jev-ultrafast) — Browser Use's browser agent with the same operation + target design, which this follows.
-- [phone-use](https://github.com/Rajmeet/phone-use) — the device runtime underneath, and the full agent harness (maps, skills, permissions) that the Jev runner there plugs into.
+- [jev-ultrafast](https://github.com/browser-use/jev-ultrafast), the browser agent this design follows.
+- [phone-use](https://www.npmjs.com/package/phone-use), the CLI, SDK, and cloud phones underneath. [app.phoneuse.dev](https://app.phoneuse.dev)
+- [mobile-jev](https://github.com/droidrun/mobile-jev), droidrun's Jev agent for Android.
 - [TypeSafe: System One models](https://docs.typesafe.ai/concepts/system-one)
 
 MIT.
